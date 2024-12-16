@@ -1,13 +1,15 @@
+import 'package:app/providers/api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:provider/provider.dart';
+import 'package:app/providers/artifact_provider.dart';
 
 class QRScannerScreen extends StatefulWidget {
   @override
   _QRScannerScreenState createState() => _QRScannerScreenState();
 }
 
-class _QRScannerScreenState extends State<QRScannerScreen>
-    with SingleTickerProviderStateMixin {
+class _QRScannerScreenState extends State<QRScannerScreen> with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _animation;
 
@@ -47,8 +49,8 @@ class _QRScannerScreenState extends State<QRScannerScreen>
               final String? code = barcode?.rawValue;
 
               if (code != null) {
-                // Hiển thị kết quả và quay lại màn hình trước
-                Navigator.pop(context, code);
+                // Gọi API lấy dữ liệu artifact từ QR Code
+                _fetchArtifactData(code);
               }
             },
           ),
@@ -111,5 +113,25 @@ class _QRScannerScreenState extends State<QRScannerScreen>
         ],
       ),
     );
+  }
+
+  // Hàm gọi API để lấy dữ liệu Artifact
+  Future<void> _fetchArtifactData(String qrCode) async {
+    try {
+      // Gọi API lấy dữ liệu Artifact bằng mã QR
+      var artifact = await ApiService.fetchArtifactFromApi(qrCode);
+
+      // Lưu vào provider
+      context.read<ArtifactProvider>().setArtifact(artifact);
+
+      // Quay lại màn hình trước
+      Navigator.pop(context);
+    } catch (e) {
+      // Hiển thị thông báo lỗi nếu có
+      print("Lỗi khi gọi API: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Không thể tải dữ liệu. Xin thử lại!")),
+      );
+    }
   }
 }

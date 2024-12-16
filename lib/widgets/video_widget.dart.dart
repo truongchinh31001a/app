@@ -18,7 +18,13 @@ class _VideoWidgetState extends State<VideoWidget> {
     super.initState();
     _controller = VideoPlayerController.network(widget.videoUrl)
       ..initialize().then((_) {
-        setState(() {}); // Cập nhật lại trạng thái sau khi video được load
+        setState(() {});
+      }).catchError((e) {
+        // In ra lỗi để dễ dàng xác định vấn đề
+        print("Error loading video: $e");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Không thể tải video. Lỗi: $e')),
+        );
       });
   }
 
@@ -41,6 +47,7 @@ class _VideoWidgetState extends State<VideoWidget> {
                       aspectRatio: _controller.value.aspectRatio,
                       child: VideoPlayer(_controller),
                     ),
+                    SizedBox(height: 10),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
