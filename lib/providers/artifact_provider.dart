@@ -1,24 +1,35 @@
-import 'package:app/models/artifact.dart';
-import 'package:app/services/artifact_service.dart';
 import 'package:flutter/material.dart';
+import '../models/artifact.dart';
+import '../services/artifact_service.dart';
 
 class ArtifactProvider with ChangeNotifier {
-  Artifact? _artifact;
+  final ArtifactService _artifactService = ArtifactService();
 
-  Artifact? get artifact => _artifact;
+  Artifact? _currentArtifact;
+  bool _isLoading = false;
+  String? _errorMessage;
 
-  // Hàm gọi API lấy dữ liệu Artifact dựa trên QR Code
+  Artifact? get currentArtifact => _currentArtifact;
+  bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
+
   Future<void> fetchArtifactByQRCode(String qrCode) async {
-    final response = await ArtifactService.fetchArtifactByQRCode(qrCode);
-    if (response != null) {
-      _artifact = Artifact.fromJson(response);
-      notifyListeners();  // Cập nhật UI
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      _currentArtifact = await _artifactService.fetchArtifactByQRCode(qrCode);
+    } catch (e) {
+      _errorMessage = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
-  // Phương thức set trực tiếp Artifact
-  void setArtifact(Artifact artifact) {
-    _artifact = artifact;
-    notifyListeners();  // Cập nhật UI
+  void clearCurrentArtifact() {
+    _currentArtifact = null;
+    notifyListeners();
   }
 }

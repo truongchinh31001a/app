@@ -1,60 +1,83 @@
-import 'package:app/providers/api_service.dart';
+import 'package:app/screens/detail_artifact_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
-import 'package:app/providers/artifact_provider.dart';
+import '../providers/artifact_provider.dart';
 
 class QRScannerScreen extends StatefulWidget {
+  const QRScannerScreen({Key? key}) : super(key: key);
+
   @override
   _QRScannerScreenState createState() => _QRScannerScreenState();
 }
 
-class _QRScannerScreenState extends State<QRScannerScreen> with SingleTickerProviderStateMixin {
+class _QRScannerScreenState extends State<QRScannerScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _animation;
+
+  bool _isProcessing = false; // Trạng thái xử lý QR Code
 
   @override
   void initState() {
     super.initState();
 
-    // Tạo controller cho animation
+    // Controller cho animation
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
 
-    // Tạo animation tuyến tính để di chuyển thanh sáng
+    // Animation tuyến tính cho thanh sáng
     _animation = Tween<double>(begin: 0, end: 1).animate(_animationController);
   }
 
   @override
   void dispose() {
-    _animationController.dispose(); // Hủy controller khi không cần thiết
+    _animationController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('QR Scanner'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('Quét QR')),
       body: Stack(
         children: [
-          // Camera scanner
+          // Camera QR Scanner
           MobileScanner(
-            onDetect: (BarcodeCapture capture) {
-              final Barcode? barcode = capture.barcodes.first;
-              final String? code = barcode?.rawValue;
+            onDetect: (BarcodeCapture capture) async {
+              if (_isProcessing) return; // Ngăn gọi lại nhiều lần
 
-              if (code != null) {
-                // Gọi API lấy dữ liệu artifact từ QR Code
-                _fetchArtifactData(code);
+              final qrCode = capture.barcodes.first.rawValue;
+
+              if (qrCode != null) {
+                setState(() {
+                  _isProcessing = true; // Bắt đầu xử lý
+                });
+
+                try {
+                  await Provider.of<ArtifactProvider>(context, listen: false)
+                      .fetchArtifactByQRCode(qrCode);
+
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ArtifactDetailScreen(),
+                    ),
+                  );
+                } catch (e) {
+                  _showErrorSnackBar(context, 'Lỗi khi tải dữ liệu: $e');
+                } finally {
+                  setState(() {
+                    _isProcessing = false; // Reset trạng thái nếu cần
+                  });
+                }
               }
             },
           ),
-          // Overlay khung quét và animation
+
+          // Overlay với khung quét và animation
           Center(
             child: Stack(
               children: [
@@ -64,13 +87,13 @@ class _QRScannerScreenState extends State<QRScannerScreen> with SingleTickerProv
                   height: 250,
                   decoration: BoxDecoration(
                     border: Border.all(
-                      color: Colors.blue, // Màu viền của khung quét
-                      width: 2, // Độ dày của viền
+                      color: Colors.blueAccent,
+                      width: 3,
                     ),
-                    borderRadius: BorderRadius.circular(10), // Góc bo tròn
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                // Animation thanh sáng
+                // Animation thanh sáng di chuyển
                 Positioned.fill(
                   child: AnimatedBuilder(
                     animation: _animation,
@@ -78,9 +101,9 @@ class _QRScannerScreenState extends State<QRScannerScreen> with SingleTickerProv
                       return Align(
                         alignment: Alignment(0, _animation.value * 2 - 1),
                         child: Container(
-                          width: 230,
-                          height: 2,
-                          color: Colors.blue, // Màu của thanh sáng
+                          margin: const EdgeInsets.symmetric(horizontal: 10),
+                          height: 3,
+                          color: Colors.blueAccent,
                         ),
                       );
                     },
@@ -89,49 +112,45 @@ class _QRScannerScreenState extends State<QRScannerScreen> with SingleTickerProv
               ],
             ),
           ),
-          // Overlay tối bên ngoài khung quét
+
+          // Overlay làm mờ xung quanh vùng quét
           Positioned.fill(
-            child: IgnorePointer(
-              child: Container(
-                color: Colors.black.withOpacity(0.5), // Overlay mờ
-                child: Stack(
-                  children: [
-                    // Xóa vùng bên trong khung quét
-                    Align(
-                      alignment: Alignment.center,
-                      child: Container(
-                        width: 250,
-                        height: 250,
-                        color: Colors.transparent, // Xóa overlay tại khung
-                      ),
+            child: Container(
+              color: Colors.black.withOpacity(0.5),
+              child: Stack(
+                children: [
+                  Align(
+                    alignment: Alignment.center,
+                    child: Container(
+                      width: 250,
+                      height: 250,
+                      color: Colors.transparent, // Vùng khung quét không bị làm mờ
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
+
+          // Loading Indicator khi đang xử lý QR Code
+          if (_isProcessing)
+            const Center(
+              child: CircularProgressIndicator(
+                color: Colors.white,
+              ),
+            ),
         ],
       ),
     );
   }
 
-  // Hàm gọi API để lấy dữ liệu Artifact
-  Future<void> _fetchArtifactData(String qrCode) async {
-    try {
-      // Gọi API lấy dữ liệu Artifact bằng mã QR
-      var artifact = await ApiService.fetchArtifactFromApi(qrCode);
-
-      // Lưu vào provider
-      context.read<ArtifactProvider>().setArtifact(artifact);
-
-      // Quay lại màn hình trước
-      Navigator.pop(context);
-    } catch (e) {
-      // Hiển thị thông báo lỗi nếu có
-      print("Lỗi khi gọi API: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Không thể tải dữ liệu. Xin thử lại!")),
-      );
-    }
+  // Hiển thị thông báo lỗi
+  void _showErrorSnackBar(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
 }

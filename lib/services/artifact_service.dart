@@ -1,19 +1,32 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:app/models/artifact.dart';
+import '../models/artifact.dart';
 
-class ApiService {
-  static const String _baseUrl = 'https://your-api-endpoint.com';
+class ArtifactService {
+  final String baseUrl = 'http://192.168.1.86:3000/api/app';
 
-  // Hàm gọi API để lấy dữ liệu artifact từ QR code
-  static Future<Artifact> fetchArtifactFromApi(String qrCode) async {
-    final response = await http.get(Uri.parse('$_baseUrl/artifacts?qr_code=$qrCode'));
+  Future<Artifact?> fetchArtifactByQRCode(String qrCode) async {
+    final response = await http.get(Uri.parse('$baseUrl/artifacts?qr_code=$qrCode'));
 
     if (response.statusCode == 200) {
-      // Parse và trả về đối tượng Artifact
-      return Artifact.fromJson(json.decode(response.body));
+      try {
+
+        // Trường hợp chuỗi JSON bị lồng vào dạng String
+        final jsonData = response.body.startsWith('{')
+            ? json.decode(response.body) // JSON hợp lệ
+            : json.decode(json.decode(response.body)); // JSON lồng String
+
+        // Kiểm tra dữ liệu có đúng dạng Map không
+        if (jsonData is Map<String, dynamic>) {
+          return Artifact.fromJson(jsonData);
+        } else {
+          throw Exception("Invalid response format: Expected Map but got ${jsonData.runtimeType}");
+        }
+      } catch (e) {
+        throw Exception("Error decoding JSON: $e");
+      }
     } else {
-      throw Exception('Failed to load artifact');
+      throw Exception("API Error: ${response.statusCode}");
     }
   }
 }

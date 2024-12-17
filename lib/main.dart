@@ -1,9 +1,10 @@
+import 'package:app/providers/video_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/story_provider.dart';
-import 'providers/artifact_provider.dart';  // Thêm import cho ArtifactProvider
+import 'providers/artifact_provider.dart';
+import 'providers/audio_provider.dart'; // Thêm import cho AudioProvider
 import 'services/story_service.dart';
-import 'services/artifact_service.dart';  // Dịch vụ Artifact nếu cần
 import 'screens/splash_screen.dart';
 import 'screens/main_screen.dart';
 
@@ -26,6 +27,11 @@ class MuseumApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (_) => ArtifactProvider(), // Khởi tạo ArtifactProvider
         ),
+        // Provider cho Audio
+        ChangeNotifierProvider(
+          create: (_) => AudioProvider(), // Khởi tạo AudioProvider
+        ),
+        ChangeNotifierProvider(create: (_) => VideoProvider()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
