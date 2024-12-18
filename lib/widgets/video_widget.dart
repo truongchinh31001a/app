@@ -89,7 +89,8 @@ class VideoWidget extends StatelessWidget {
   }
 
   /// Chế độ Fullscreen
-  void _enterFullScreen(BuildContext context, VideoProvider videoProvider) async {
+  void _enterFullScreen(
+      BuildContext context, VideoProvider videoProvider) async {
     await videoProvider.enterFullScreen();
 
     await SystemChrome.setPreferredOrientations([
@@ -103,10 +104,19 @@ class VideoWidget extends StatelessWidget {
         builder: (_) => FullScreenVideo(videoProvider: videoProvider),
       ),
     ).then((_) async {
-      // Khôi phục trạng thái màn hình sau khi thoát fullscreen
-      await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+      // Reset lại trạng thái màn hình khi thoát fullscreen
+      await SystemChrome.setPreferredOrientations(
+          [DeviceOrientation.portraitUp]);
       await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+
+      // Đảm bảo video được làm mới lại khi trở về chế độ portrait
       videoProvider.exitFullScreen();
+
+      Future.microtask(() {
+        videoProvider.controller?.setVolume(1.0);
+        videoProvider.controller?.pause(); // Đảm bảo dừng video (nếu cần)
+        videoProvider.notifyListeners(); // Cập nhật layout
+      });
     });
   }
 }
@@ -142,8 +152,10 @@ class FullScreenVideo extends StatelessWidget {
   }
 
   /// Thanh điều khiển ở chế độ fullscreen
-  Widget _buildFullScreenControls(VideoProvider videoProvider, BuildContext context) {
-    return Positioned( // Cố định thanh điều khiển ở dưới
+  Widget _buildFullScreenControls(
+      VideoProvider videoProvider, BuildContext context) {
+    return Positioned(
+      // Cố định thanh điều khiển ở dưới
       left: 0,
       right: 0,
       child: Container(
@@ -162,10 +174,12 @@ class FullScreenVideo extends StatelessWidget {
             Expanded(
               child: Slider(
                 value: videoProvider.controller!.value.position.inSeconds
-                    .clamp(0, videoProvider.controller!.value.duration.inSeconds)
+                    .clamp(
+                        0, videoProvider.controller!.value.duration.inSeconds)
                     .toDouble(),
                 min: 0,
-                max: videoProvider.controller!.value.duration.inSeconds.toDouble(),
+                max: videoProvider.controller!.value.duration.inSeconds
+                    .toDouble(),
                 activeColor: Colors.white,
                 inactiveColor: Colors.grey,
                 onChanged: (value) {

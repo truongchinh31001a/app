@@ -54,37 +54,47 @@ class AudioWidget extends StatelessWidget {
                     .toDouble(),
                 min: 0,
                 max: audioProvider.totalDuration.inSeconds.toDouble(),
-                onChanged: (value) =>
-                    audioProvider.seek((value).toInt() - audioProvider.currentPosition.inSeconds),
+                activeColor: Colors.black, // Màu thanh tiến trình (đã chạy)
+                inactiveColor: Colors.grey, // Màu thanh tiến trình (chưa chạy)
+                onChanged: (value) => audioProvider.seek(
+                  (value).toInt() - audioProvider.currentPosition.inSeconds,
+                ),
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(_formatDuration(audioProvider.currentPosition)),
-                  Text(_formatDuration(audioProvider.totalDuration)),
+                  Text(
+                    _formatDuration(audioProvider.currentPosition),
+                    style: const TextStyle(color: Colors.black), // Màu chữ đen
+                  ),
+                  Text(
+                    _formatDuration(audioProvider.totalDuration),
+                    style: const TextStyle(color: Colors.black), // Màu chữ đen
+                  ),
                 ],
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.replay_10, color: Colors.blueAccent),
+                    icon: const Icon(Icons.replay_10, color: Colors.black),
                     onPressed: () => audioProvider.seek(-10),
                   ),
                   ElevatedButton(
                     onPressed: audioProvider.togglePlayPause,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueAccent,
+                      backgroundColor: Colors.black, // Nền nút play/pause màu đen
                       shape: const CircleBorder(),
                       padding: const EdgeInsets.all(14),
                     ),
                     child: Icon(
                       audioProvider.isPlaying ? Icons.pause : Icons.play_arrow,
                       size: 30,
+                      color: Colors.white, // Icon trắng
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.forward_10, color: Colors.blueAccent),
+                    icon: const Icon(Icons.forward_10, color: Colors.black),
                     onPressed: () => audioProvider.seek(10),
                   ),
                 ],

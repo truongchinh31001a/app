@@ -17,7 +17,8 @@ class VideoProvider with ChangeNotifier {
 
   /// Khởi tạo video
   Future<void> initVideo(String url) async {
-    if (_controller != null && _controller!.dataSource == url) return; // Tránh khởi tạo lại
+    if (_controller != null && _controller!.dataSource == url)
+      return; // Tránh khởi tạo lại
 
     _isLoading = true;
     notifyListeners();
@@ -55,13 +56,13 @@ class VideoProvider with ChangeNotifier {
   }
 
   /// Hiển thị hoặc ẩn controls
-  void toggleControls() {
-    _showControls = !_showControls;
-    notifyListeners();
-
-    if (_showControls) {
-      _startHideControlsTimer();
+  void toggleControls({bool? show}) {
+    if (show != null) {
+      _showControls = show;
+    } else {
+      _showControls = !_showControls;
     }
+    notifyListeners();
   }
 
   /// Tự động ẩn controls sau 3 giây

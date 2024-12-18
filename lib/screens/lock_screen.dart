@@ -1,35 +1,28 @@
-import 'package:app/screens/detail_artifact_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
-import '../providers/artifact_provider.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
+import '../providers/security_provider.dart';
+import '../services/qr_ticket_service.dart';
 
-class QRScannerScreen extends StatefulWidget {
-  const QRScannerScreen({Key? key}) : super(key: key);
+class LockScreen extends StatefulWidget {
+  const LockScreen({Key? key}) : super(key: key);
 
   @override
-  _QRScannerScreenState createState() => _QRScannerScreenState();
+  _LockScreenState createState() => _LockScreenState();
 }
 
-class _QRScannerScreenState extends State<QRScannerScreen>
-    with SingleTickerProviderStateMixin {
+class _LockScreenState extends State<LockScreen> with SingleTickerProviderStateMixin {
+  bool _isProcessing = false; // Trạng thái xử lý API
+  bool _isSuccess = false; // Trạng thái quét thành công
   late AnimationController _animationController;
-  late Animation<double> _animation;
-
-  bool _isProcessing = false; // Trạng thái xử lý QR Code
 
   @override
   void initState() {
     super.initState();
-
-    // Controller cho animation
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
-
-    // Animation tuyến tính cho thanh sáng
-    _animation = Tween<double>(begin: 0, end: 1).animate(_animationController);
+      duration: const Duration(milliseconds: 500),
+    );
   }
 
   @override
@@ -38,41 +31,71 @@ class _QRScannerScreenState extends State<QRScannerScreen>
     super.dispose();
   }
 
+  Future<void> _callApi(String qrCode) async {
+    setState(() {
+      _isProcessing = true;
+    });
+
+    try {
+      final response = await QRTicketService.scanTicket(qrCode);
+
+      if (response['success']) {
+        final data = response['data'];
+        final expirationDate = DateTime.parse(data['expiration_date']);
+        final visitorId = data['visitor_id'];
+
+        // Cập nhật trạng thái thành công
+        setState(() {
+          _isSuccess = true;
+        });
+
+        // Bắt đầu animation
+        _animationController.forward();
+
+        // Cập nhật SecurityProvider
+        Provider.of<SecurityProvider>(context, listen: false).unlock(
+          expirationTime: expirationDate,
+          visitorId: visitorId,
+        );
+
+        // Chờ 1 giây để hoàn tất animation rồi điều hướng
+        await Future.delayed(const Duration(seconds: 1));
+        Navigator.pushReplacementNamed(context, '/main');
+      } else {
+        _showErrorSnackBar(response['message']);
+      }
+    } catch (error) {
+      _showErrorSnackBar('Error scanning QR code');
+    } finally {
+      setState(() {
+        _isProcessing = false;
+      });
+    }
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Quét QR')),
+      backgroundColor: Colors.white,
       body: Stack(
         children: [
           // Camera QR Scanner
           MobileScanner(
-            onDetect: (BarcodeCapture capture) async {
-              if (_isProcessing) return; // Ngăn gọi lại nhiều lần
-
+            onDetect: (BarcodeCapture capture) {
+              if (_isProcessing || _isSuccess) return;
               final qrCode = capture.barcodes.first.rawValue;
 
               if (qrCode != null) {
-                setState(() {
-                  _isProcessing = true; // Bắt đầu xử lý
-                });
-
-                try {
-                  await Provider.of<ArtifactProvider>(context, listen: false)
-                      .fetchArtifactByQRCode(qrCode);
-
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const ArtifactDetailScreen(),
-                    ),
-                  );
-                } catch (e) {
-                  _showErrorSnackBar(context, 'Lỗi khi tải dữ liệu: $e');
-                } finally {
-                  setState(() {
-                    _isProcessing = false; // Reset trạng thái nếu cần
-                  });
-                }
+                _callApi(qrCode);
               }
             },
           ),
@@ -87,22 +110,6 @@ class _QRScannerScreenState extends State<QRScannerScreen>
                 Center(
                   child: Stack(
                     children: [
-                      // Animation thanh sáng di chuyển
-                      Positioned.fill(
-                        child: AnimatedBuilder(
-                          animation: _animation,
-                          builder: (context, child) {
-                            return Align(
-                              alignment: Alignment(0, _animation.value * 2 - 1),
-                              child: Container(
-                                margin: const EdgeInsets.symmetric(horizontal: 10),
-                                height: 3,
-                                color: Colors.blueAccent,
-                              ),
-                            );
-                          },
-                        ),
-                      ),
                       // 4 góc của khung quét
                       _buildCornerDecorations(),
                     ],
@@ -112,13 +119,42 @@ class _QRScannerScreenState extends State<QRScannerScreen>
             ),
           ),
 
-          // Loading Indicator khi đang xử lý QR Code
+          // Loading Indicator khi đang xử lý
           if (_isProcessing)
             const Center(
-              child: CircularProgressIndicator(
-                color: Colors.white,
+              child: CircularProgressIndicator(),
+            ),
+
+          // Dấu tick thành công
+          if (_isSuccess)
+            Center(
+              child: ScaleTransition(
+                scale: _animationController.drive(
+                  Tween<double>(begin: 0.0, end: 1.0),
+                ),
+                child: Icon(
+                  Icons.check_circle,
+                  size: 120,
+                  color: Colors.green,
+                ),
               ),
             ),
+
+          // Hướng dẫn sử dụng
+          Positioned(
+            bottom: 50,
+            left: 20,
+            right: 20,
+            child: Text(
+              'Di chuyển mã QR vào khung để quét',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.black,
+                fontSize: 16.0,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -228,16 +264,6 @@ class _QRScannerScreenState extends State<QRScannerScreen>
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  // Hiển thị thông báo lỗi
-  void _showErrorSnackBar(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
       ),
     );
   }
