@@ -59,6 +59,20 @@ class SecurityProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// Đặt lại trạng thái bảo mật
+  Future<void> reset() async {
+    _isUnlocked = false;
+    _expirationTime = null;
+    _visitorId = null;
+    _timer?.cancel();
+
+    print('Resetting security state');
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear(); // Xóa toàn bộ dữ liệu trong SharedPreferences
+
+    notifyListeners();
+  }
+
   /// Kiểm tra trạng thái hết hạn
   void checkExpiration() {
     if (_expirationTime != null && DateTime.now().isAfter(_expirationTime!)) {
@@ -89,6 +103,4 @@ class SecurityProvider with ChangeNotifier {
     _timer?.cancel(); // Hủy Timer khi không cần thiết
     super.dispose();
   }
-
-  
 }

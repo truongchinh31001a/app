@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:lottie/lottie.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:provider/provider.dart';
 import '../providers/security_provider.dart';
 import '../services/qr_ticket_service.dart';
 
@@ -11,68 +12,93 @@ class LockScreen extends StatefulWidget {
   _LockScreenState createState() => _LockScreenState();
 }
 
-class _LockScreenState extends State<LockScreen> with SingleTickerProviderStateMixin {
-  bool _isProcessing = false; // Trạng thái xử lý API
-  bool _isSuccess = false; // Trạng thái quét thành công
-  late AnimationController _animationController;
+class _LockScreenState extends State<LockScreen> {
+  bool _isProcessing = false;
+  bool _isSuccess = false;
+  bool _isStartVisible = true;
+  late MobileScannerController _cameraController;
 
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 500),
-    );
+    _cameraController = MobileScannerController(); // Khởi tạo camera
   }
 
   @override
   void dispose() {
-    _animationController.dispose();
+    _cameraController.dispose(); // Dọn dẹp camera
     super.dispose();
   }
 
+  /// Xử lý gọi API và trạng thái
   Future<void> _callApi(String qrCode) async {
+    print('[CallAPI] Start processing QR Code: $qrCode');
+
     setState(() {
       _isProcessing = true;
+      _isSuccess = false;
+      _isStartVisible = false;
     });
 
     try {
+      // Tắt camera ngay sau khi quét thành công
+      _cameraController.stop();
+      print('[CallAPI] Camera stopped.');
+
+      // Gọi API xử lý mã QR
       final response = await QRTicketService.scanTicket(qrCode);
+      print('[CallAPI] API Response: $response');
 
       if (response['success']) {
+        print('[CallAPI] QR code is valid. Proceeding with data...');
         final data = response['data'];
         final expirationDate = DateTime.parse(data['expiration_date']);
         final visitorId = data['visitor_id'];
 
-        // Cập nhật trạng thái thành công
-        setState(() {
-          _isSuccess = true;
-        });
+        if (mounted) {
+          // Lưu trạng thái vào SecurityProvider
+          Provider.of<SecurityProvider>(context, listen: false).unlock(
+            expirationTime: expirationDate,
+            visitorId: visitorId,
+          );
 
-        // Bắt đầu animation
-        _animationController.forward();
+          setState(() {
+            _isProcessing = false;
+            _isSuccess = true;
+          });
 
-        // Cập nhật SecurityProvider
-        Provider.of<SecurityProvider>(context, listen: false).unlock(
-          expirationTime: expirationDate,
-          visitorId: visitorId,
-        );
+          // Chờ hoạt ảnh success hoàn tất
+          await Future.delayed(const Duration(seconds: 2));
 
-        // Chờ 1 giây để hoàn tất animation rồi điều hướng
-        await Future.delayed(const Duration(seconds: 1));
-        Navigator.pushReplacementNamed(context, '/main');
+          if (mounted) {
+            // Chuyển màn hình chính
+            Navigator.pushReplacementNamed(context, '/main');
+          }
+        }
       } else {
-        _showErrorSnackBar(response['message']);
+        if (mounted) {
+          _showErrorSnackBar(response['message']);
+        }
       }
-    } catch (error) {
-      _showErrorSnackBar('Error scanning QR code');
+    } catch (error, stackTrace) {
+      print('[CallAPI] Error: $error');
+      print('[CallAPI] StackTrace: $stackTrace');
+      if (mounted) {
+        _showErrorSnackBar('Error processing QR code.');
+      }
     } finally {
-      setState(() {
-        _isProcessing = false;
-      });
+      if (!_isSuccess && mounted) {
+        // Reset trạng thái nếu thất bại
+        setState(() {
+          _isProcessing = false;
+          _isStartVisible = true;
+        });
+        _cameraController.start(); // Bật lại camera nếu cần
+      }
     }
   }
 
+  /// Hiển thị thông báo lỗi
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -82,76 +108,73 @@ class _LockScreenState extends State<LockScreen> with SingleTickerProviderStateM
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Stack(
+  /// Hiển thị giao diện quét QR
+  Widget _buildQRScannerBottomSheet() {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.5, // Bottom sheet chiếm 50% chiều cao
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
+        ),
+      ),
+      padding: const EdgeInsets.all(16.0),
+      child: Stack(
         children: [
-          // Camera QR Scanner
-          MobileScanner(
-            onDetect: (BarcodeCapture capture) {
-              if (_isProcessing || _isSuccess) return;
-              final qrCode = capture.barcodes.first.rawValue;
-
-              if (qrCode != null) {
-                _callApi(qrCode);
-              }
-            },
-          ),
-
-          // Overlay làm mờ xung quanh vùng quét và khung quét
-          Positioned.fill(
-            child: Stack(
-              children: [
-                // Làm mờ bên ngoài khung quét
-                _buildScanOverlay(),
-                // Khung quét với 4 góc màu trắng
-                Center(
-                  child: Stack(
-                    children: [
-                      // 4 góc của khung quét
-                      _buildCornerDecorations(),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Loading Indicator khi đang xử lý
-          if (_isProcessing)
-            const Center(
-              child: CircularProgressIndicator(),
-            ),
-
-          // Dấu tick thành công
-          if (_isSuccess)
-            Center(
-              child: ScaleTransition(
-                scale: _animationController.drive(
-                  Tween<double>(begin: 0.0, end: 1.0),
-                ),
-                child: Icon(
-                  Icons.check_circle,
-                  size: 120,
-                  color: Colors.green,
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                'Scan your QR Code',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
                 ),
               ),
-            ),
-
-          // Hướng dẫn sử dụng
+              const SizedBox(height: 20),
+              Center(
+                child: Container(
+                  width: 250, // Thu nhỏ kích thước vùng quét
+                  height: 250,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.black, width: 4), // Viền đen
+                    borderRadius: BorderRadius.circular(10), // Bo tròn góc
+                  ),
+                  child: MobileScanner(
+                    controller: _cameraController,
+                    onDetect: (BarcodeCapture capture) {
+                      final qrCode = capture.barcodes.first.rawValue;
+                      print('[QR Scanner] QR code detected: $qrCode');
+                      if (qrCode != null) {
+                        Navigator.pop(context); // Đóng bottom sheet
+                        _callApi(qrCode); // Gọi xử lý mã QR
+                      }
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Align the QR code within the frame',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: Colors.grey),
+              ),
+            ],
+          ),
+          // Nút đóng (X)
           Positioned(
-            bottom: 50,
-            left: 20,
-            right: 20,
-            child: Text(
-              'Di chuyển mã QR vào khung để quét',
-              textAlign: TextAlign.center,
-              style: TextStyle(
+            top: 10,
+            right: 10,
+            child: GestureDetector(
+              onTap: () {
+                Navigator.pop(context); // Đóng bottom sheet
+              },
+              child: const Icon(
+                Icons.close,
                 color: Colors.black,
-                fontSize: 16.0,
-                fontWeight: FontWeight.w600,
+                size: 24,
               ),
             ),
           ),
@@ -160,109 +183,75 @@ class _LockScreenState extends State<LockScreen> with SingleTickerProviderStateM
     );
   }
 
-  // Tạo overlay làm mờ xung quanh khung quét
-  Widget _buildScanOverlay() {
-    return Container(
-      color: Colors.black.withOpacity(0.5),
-      child: Center(
-        child: Container(
-          width: 250,
-          height: 250,
-          color: Colors.transparent, // Vùng khung quét không bị làm mờ
-        ),
-      ),
-    );
-  }
-
-  // Tạo 4 góc cho khung quét
-  Widget _buildCornerDecorations() {
-    const double cornerSize = 20;
-    const double borderWidth = 4;
-
-    return Container(
-      width: 250,
-      height: 250,
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.transparent), // Không hiển thị border tổng thể
-      ),
-      child: Stack(
+  /// Xây dựng giao diện chính
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Stack(
         children: [
-          // Góc trên trái
-          Positioned(
-            top: 0,
-            left: 0,
-            child: Container(
-              width: cornerSize,
-              height: borderWidth,
-              color: Colors.white,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.only(top: 60.0, bottom: 30.0),
+                  child: Text(
+                    'Welcome to the Museum',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF8C1B0B),
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                if (_isStartVisible)
+                  Center(
+                    child: GestureDetector(
+                      onTap: () {
+                        showModalBottomSheet(
+                          context: context,
+                          isDismissible: false,
+                          enableDrag: false,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (_) => _buildQRScannerBottomSheet(),
+                        );
+                      },
+                      child: Container(
+                        width: 60,
+                        height: 60,
+                        margin: const EdgeInsets.only(bottom: 40.0),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF8C1B0B),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.navigate_next,
+                          color: Color(0xFFF6FDFB),
+                          size: 32,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
-          Positioned(
-            top: 0,
-            left: 0,
-            child: Container(
-              width: borderWidth,
-              height: cornerSize,
-              color: Colors.white,
+          if (_isProcessing)
+            const Center(
+              child: CircularProgressIndicator(), // Hiển thị loading ở giữa
             ),
-          ),
-          // Góc trên phải
-          Positioned(
-            top: 0,
-            right: 0,
-            child: Container(
-              width: cornerSize,
-              height: borderWidth,
-              color: Colors.white,
+          if (_isSuccess)
+            Center(
+              child: Lottie.asset(
+                'assets/animations/success.json', // Hiển thị success animation ở giữa
+                width: 150,
+                height: 150,
+              ),
             ),
-          ),
-          Positioned(
-            top: 0,
-            right: 0,
-            child: Container(
-              width: borderWidth,
-              height: cornerSize,
-              color: Colors.white,
-            ),
-          ),
-          // Góc dưới trái
-          Positioned(
-            bottom: 0,
-            left: 0,
-            child: Container(
-              width: cornerSize,
-              height: borderWidth,
-              color: Colors.white,
-            ),
-          ),
-          Positioned(
-            bottom: 0,
-            left: 0,
-            child: Container(
-              width: borderWidth,
-              height: cornerSize,
-              color: Colors.white,
-            ),
-          ),
-          // Góc dưới phải
-          Positioned(
-            bottom: 0,
-            right: 0,
-            child: Container(
-              width: cornerSize,
-              height: borderWidth,
-              color: Colors.white,
-            ),
-          ),
-          Positioned(
-            bottom: 0,
-            right: 0,
-            child: Container(
-              width: borderWidth,
-              height: cornerSize,
-              color: Colors.white,
-            ),
-          ),
         ],
       ),
     );

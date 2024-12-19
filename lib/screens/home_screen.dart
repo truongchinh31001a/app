@@ -1,5 +1,7 @@
 // lib/screens/home_screen.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/security_provider.dart';
 
 class HomeScreen extends StatelessWidget {
   @override
@@ -22,7 +24,6 @@ class HomeScreen extends StatelessWidget {
             child: Align(
               alignment: Alignment.center, // Căn chỉnh văn bản vào giữa
               child: Container(
-                // Đặt một container để đảm bảo kích thước
                 constraints: const BoxConstraints(
                   maxWidth: 400, // Giới hạn kích thước nếu cần
                 ),
@@ -41,6 +42,30 @@ class HomeScreen extends StatelessWidget {
                     ],
                   ),
                   textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+          ),
+          // Reset Button
+          Center(
+            child: ElevatedButton(
+              onPressed: () {
+                Provider.of<SecurityProvider>(context, listen: false).reset();
+                Navigator.pushReplacementNamed(context, '/lock');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: const Text(
+                'Reset',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
               ),
             ),

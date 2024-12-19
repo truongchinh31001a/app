@@ -41,22 +41,31 @@ class _QRScannerScreenState extends State<QRScannerScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Quét QR')),
+      appBar: AppBar(
+        title: const Text('Quét QR', style: TextStyle(color: Colors.black)),
+        backgroundColor: Colors.white, // Nền trắng cho AppBar
+        elevation: 1, // Tạo hiệu ứng bóng nhẹ
+        iconTheme: const IconThemeData(color: Colors.black), // Màu icon là đen
+      ),
       body: Stack(
         children: [
           // Camera QR Scanner
           MobileScanner(
             onDetect: (BarcodeCapture capture) async {
-              if (_isProcessing) return; // Ngăn gọi lại nhiều lần
+              if (_isProcessing) {
+                print('[QR Scanner] Ignored detection because processing is already ongoing.');
+                return; // Ngăn quét nếu đang xử lý
+              }
 
               final qrCode = capture.barcodes.first.rawValue;
-
               if (qrCode != null) {
                 setState(() {
-                  _isProcessing = true; // Bắt đầu xử lý
+                  _isProcessing = true; // Đặt trạng thái đang xử lý
                 });
+                print('[QR Scanner] Detected QR Code: $qrCode');
 
                 try {
+                  // Gọi API hoặc xử lý QR Code
                   await Provider.of<ArtifactProvider>(context, listen: false)
                       .fetchArtifactByQRCode(qrCode);
 
@@ -67,12 +76,16 @@ class _QRScannerScreenState extends State<QRScannerScreen>
                     ),
                   );
                 } catch (e) {
+                  print('[QR Scanner] Error while fetching artifact: $e');
                   _showErrorSnackBar(context, 'Lỗi khi tải dữ liệu: $e');
                 } finally {
                   setState(() {
-                    _isProcessing = false; // Reset trạng thái nếu cần
+                    _isProcessing = false; // Reset trạng thái khi xử lý xong
                   });
+                  print('[QR Scanner] Reset processing state.');
                 }
+              } else {
+                print('[QR Scanner] QR Code is null.');
               }
             },
           ),
