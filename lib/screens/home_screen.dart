@@ -1,11 +1,28 @@
-// lib/screens/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/security_provider.dart';
 
 class HomeScreen extends StatelessWidget {
+  const HomeScreen({Key? key}) : super(key: key);
+
+  /// Ánh xạ ngôn ngữ từ `SecurityProvider`
+  String _getTextBasedOnLanguage(String? language) {
+    switch (language) {
+      case 'English':
+        return 'Phan Chau Trinh Medical Museum';
+      case 'Vietnamese':
+        return 'Bảo tàng y khoa Phan Châu Trinh';
+      default:
+        return 'Bảo tàng y khoa Phan Châu Trinh'; // Mặc định là tiếng Việt
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Lấy ngôn ngữ từ `SecurityProvider`
+    final securityProvider = Provider.of<SecurityProvider>(context);
+    final String displayText = _getTextBasedOnLanguage(securityProvider.language);
+
     return Scaffold(
       body: Stack(
         children: [
@@ -28,7 +45,7 @@ class HomeScreen extends StatelessWidget {
                   maxWidth: 400, // Giới hạn kích thước nếu cần
                 ),
                 child: Text(
-                  'Bảo tàng y khoa Phan Châu Trinh',
+                  displayText,
                   style: TextStyle(
                     fontSize: 30,
                     fontFamily: 'RibeyeMarrow', // Sử dụng font tùy chỉnh
@@ -42,30 +59,6 @@ class HomeScreen extends StatelessWidget {
                     ],
                   ),
                   textAlign: TextAlign.center,
-                ),
-              ),
-            ),
-          ),
-          // Reset Button
-          Center(
-            child: ElevatedButton(
-              onPressed: () {
-                Provider.of<SecurityProvider>(context, listen: false).reset();
-                Navigator.pushReplacementNamed(context, '/lock');
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent,
-                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              child: const Text(
-                'Reset',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
                 ),
               ),
             ),

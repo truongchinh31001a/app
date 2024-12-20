@@ -115,7 +115,6 @@ class VideoWidget extends StatelessWidget {
       Future.microtask(() {
         videoProvider.controller?.setVolume(1.0);
         videoProvider.controller?.pause(); // Đảm bảo dừng video (nếu cần)
-        videoProvider.notifyListeners(); // Cập nhật layout
       });
     });
   }

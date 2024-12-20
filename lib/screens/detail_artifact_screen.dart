@@ -1,18 +1,35 @@
-import 'package:app/screens/main_screen.dart';
-import 'package:app/screens/qr_scanner_screen.dart';
+import 'package:app/services/artifact_log_service.dart'; // Import service logging
 import 'package:app/widgets/audio_widget.dart';
 import 'package:app/widgets/video_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/artifact_provider.dart';
+import '../providers/security_provider.dart';
 
 class ArtifactDetailScreen extends StatelessWidget {
   const ArtifactDetailScreen({Key? key}) : super(key: key);
 
+  /// Ánh xạ `language` từ SecurityProvider sang mã ngôn ngữ
+  String _mapLanguage(String? language) {
+    switch (language) {
+      case 'English':
+        return 'en';
+      case 'Vietnamese':
+        return 'vi';
+      default:
+        return 'vi'; // Mặc định là tiếng Việt
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final artifactProvider = Provider.of<ArtifactProvider>(context);
+    final securityProvider = Provider.of<SecurityProvider>(context);
+    final artifactLogService = ArtifactLogService(); // Tạo service logging
     final artifact = artifactProvider.currentArtifact;
+
+    // Lấy ngôn ngữ từ `SecurityProvider`
+    final language = _mapLanguage(securityProvider.language);
 
     // Loading State
     if (artifactProvider.isLoading) {
@@ -39,13 +56,29 @@ class ArtifactDetailScreen extends StatelessWidget {
       );
     }
 
-    // Kiểm tra trạng thái
-    final String audioUrl = artifact.audioUrl['vi'] ?? '';
-    final String videoUrl = artifact.videoUrl['vi'] ?? '';
-    final String description = artifact.description['vi'] ?? 'Không có mô tả';
+    // Gọi API log scan sau khi giao diện được dựng
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        final visitorId = securityProvider.visitorId;
+        if (visitorId != null) {
+          await artifactLogService.logArtifactScan(
+            artifactId: artifact.artifactId,
+            visitorId: visitorId,
+          );
+        }
+      } catch (e) {
+        print("Error logging artifact scan: $e");
+      }
+    });
+
+    // Lấy dữ liệu theo ngôn ngữ
+    final String audioUrl = artifact.audioUrl[language] ?? '';
+    final String videoUrl = artifact.videoUrl[language] ?? '';
+    final String description = artifact.description[language] ?? 'Không có mô tả';
     final String imageUrl = artifact.imageUrl;
 
     return Scaffold(
+      backgroundColor: Colors.white, // Đặt màu nền trắng
       appBar: _buildAppBar(context, artifact.name),
       body: Stack(
         children: [
@@ -61,10 +94,16 @@ class ArtifactDetailScreen extends StatelessWidget {
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16.0),
-                  child: Text(
-                    description,
-                    style: const TextStyle(fontSize: 16, height: 1.5),
-                    textAlign: TextAlign.justify,
+                  child: Align(
+                    alignment: Alignment.topLeft, 
+                    child: Text(
+                      description,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        height: 1.5,
+                        color: Colors.black,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -107,7 +146,7 @@ class ArtifactDetailScreen extends StatelessWidget {
         title,
         style: const TextStyle(color: Colors.black),
       ),
-      backgroundColor: Colors.transparent,
+      backgroundColor: Colors.white, // Đặt màu nền AppBar trắng
       elevation: 0,
       iconTheme: const IconThemeData(color: Colors.black),
       leading: IconButton(

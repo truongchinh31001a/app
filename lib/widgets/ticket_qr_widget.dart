@@ -26,11 +26,13 @@ class _SecurityBottomSheetState extends State<SecurityBottomSheet> {
         final data = response['data'];
         final visitorId = data['visitor_id'];
         final expirationDate = DateTime.parse(data['expiration_date']);
+        final language = data['language'];
 
         // Mở khóa thông qua SecurityProvider
         Provider.of<SecurityProvider>(context, listen: false).unlock(
           expirationTime: expirationDate,
           visitorId: visitorId,
+          language: language,
         );
 
         print('Unlock successful, closing BottomSheet.');

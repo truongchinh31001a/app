@@ -15,6 +15,7 @@ class LockScreen extends StatefulWidget {
 class _LockScreenState extends State<LockScreen> {
   bool _isProcessing = false;
   bool _isSuccess = false;
+  bool _isLogout = false;
   bool _isStartVisible = true;
   late MobileScannerController _cameraController;
 
@@ -24,42 +25,68 @@ class _LockScreenState extends State<LockScreen> {
     _cameraController = MobileScannerController(); // Khởi tạo camera
   }
 
+  /// Sử dụng phương thức didChangeDependencies để xử lý logic liên quan đến Provider
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // Nếu cần xử lý logic đặc biệt khi logout, sử dụng arguments
+    final args = ModalRoute.of(context)?.settings.arguments as String?;
+    if (args == 'logout') {
+      handleLogout(); // Gọi hàm xử lý logout
+    }
+  }
+
   @override
   void dispose() {
-    _cameraController.dispose(); // Dọn dẹp camera
+    _cameraController.dispose();
     super.dispose();
+  }
+
+  /// Xử lý trạng thái logout
+  Future<void> handleLogout() async {
+    setState(() {
+      _isProcessing = false;
+      _isSuccess = true;
+      _isLogout = true; // Đặt trạng thái logout
+      _isStartVisible = false;
+    });
+
+    await Future.delayed(const Duration(seconds: 2));
+
+    if (mounted) {
+      setState(() {
+        _isLogout = false;
+        _isSuccess = false;
+        _isStartVisible = true; // Hiển thị lại giao diện ban đầu
+      });
+    }
   }
 
   /// Xử lý gọi API và trạng thái
   Future<void> _callApi(String qrCode) async {
-    print('[CallAPI] Start processing QR Code: $qrCode');
-
     setState(() {
       _isProcessing = true;
       _isSuccess = false;
       _isStartVisible = false;
+      _isLogout = false;
     });
 
     try {
-      // Tắt camera ngay sau khi quét thành công
       _cameraController.stop();
-      print('[CallAPI] Camera stopped.');
 
-      // Gọi API xử lý mã QR
       final response = await QRTicketService.scanTicket(qrCode);
-      print('[CallAPI] API Response: $response');
-
       if (response['success']) {
-        print('[CallAPI] QR code is valid. Proceeding with data...');
         final data = response['data'];
         final expirationDate = DateTime.parse(data['expiration_date']);
         final visitorId = data['visitor_id'];
+        final language = data['language'];
 
         if (mounted) {
-          // Lưu trạng thái vào SecurityProvider
           Provider.of<SecurityProvider>(context, listen: false).unlock(
             expirationTime: expirationDate,
             visitorId: visitorId,
+            language: language,
           );
 
           setState(() {
@@ -67,11 +94,9 @@ class _LockScreenState extends State<LockScreen> {
             _isSuccess = true;
           });
 
-          // Chờ hoạt ảnh success hoàn tất
           await Future.delayed(const Duration(seconds: 2));
 
           if (mounted) {
-            // Chuyển màn hình chính
             Navigator.pushReplacementNamed(context, '/main');
           }
         }
@@ -80,20 +105,17 @@ class _LockScreenState extends State<LockScreen> {
           _showErrorSnackBar(response['message']);
         }
       }
-    } catch (error, stackTrace) {
-      print('[CallAPI] Error: $error');
-      print('[CallAPI] StackTrace: $stackTrace');
+    } catch (error) {
       if (mounted) {
         _showErrorSnackBar('Error processing QR code.');
       }
     } finally {
       if (!_isSuccess && mounted) {
-        // Reset trạng thái nếu thất bại
         setState(() {
           _isProcessing = false;
           _isStartVisible = true;
         });
-        _cameraController.start(); // Bật lại camera nếu cần
+        _cameraController.start();
       }
     }
   }
@@ -111,7 +133,7 @@ class _LockScreenState extends State<LockScreen> {
   /// Hiển thị giao diện quét QR
   Widget _buildQRScannerBottomSheet() {
     return Container(
-      height: MediaQuery.of(context).size.height * 0.5, // Bottom sheet chiếm 50% chiều cao
+      height: MediaQuery.of(context).size.height * 0.5,
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.only(
@@ -136,20 +158,19 @@ class _LockScreenState extends State<LockScreen> {
               const SizedBox(height: 20),
               Center(
                 child: Container(
-                  width: 250, // Thu nhỏ kích thước vùng quét
+                  width: 250,
                   height: 250,
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.black, width: 4), // Viền đen
-                    borderRadius: BorderRadius.circular(10), // Bo tròn góc
+                    border: Border.all(color: Colors.black, width: 4),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: MobileScanner(
                     controller: _cameraController,
                     onDetect: (BarcodeCapture capture) {
                       final qrCode = capture.barcodes.first.rawValue;
-                      print('[QR Scanner] QR code detected: $qrCode');
                       if (qrCode != null) {
-                        Navigator.pop(context); // Đóng bottom sheet
-                        _callApi(qrCode); // Gọi xử lý mã QR
+                        Navigator.pop(context);
+                        _callApi(qrCode);
                       }
                     },
                   ),
@@ -163,13 +184,12 @@ class _LockScreenState extends State<LockScreen> {
               ),
             ],
           ),
-          // Nút đóng (X)
           Positioned(
             top: 10,
             right: 10,
             child: GestureDetector(
               onTap: () {
-                Navigator.pop(context); // Đóng bottom sheet
+                Navigator.pop(context);
               },
               child: const Icon(
                 Icons.close,
@@ -190,66 +210,81 @@ class _LockScreenState extends State<LockScreen> {
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Padding(
-                  padding: EdgeInsets.only(top: 60.0, bottom: 30.0),
-                  child: Text(
-                    'Welcome to the Museum',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF8C1B0B),
-                    ),
-                  ),
-                ),
-                const Spacer(),
-                if (_isStartVisible)
-                  Center(
-                    child: GestureDetector(
-                      onTap: () {
-                        showModalBottomSheet(
-                          context: context,
-                          isDismissible: false,
-                          enableDrag: false,
-                          isScrollControlled: true,
-                          backgroundColor: Colors.transparent,
-                          builder: (_) => _buildQRScannerBottomSheet(),
-                        );
-                      },
-                      child: Container(
-                        width: 60,
-                        height: 60,
-                        margin: const EdgeInsets.only(bottom: 40.0),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF8C1B0B),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(
-                          Icons.navigate_next,
-                          color: Color(0xFFF6FDFB),
-                          size: 32,
-                        ),
+          if (_isStartVisible || _isProcessing || !_isLogout)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.only(top: 60.0, bottom: 30.0),
+                    child: Text(
+                      'Welcome to the Museum',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF8C1B0B),
                       ),
                     ),
                   ),
-              ],
+                  const Spacer(),
+                  if (_isStartVisible)
+                    Center(
+                      child: GestureDetector(
+                        onTap: () {
+                          showModalBottomSheet(
+                            context: context,
+                            isDismissible: false,
+                            enableDrag: false,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            builder: (_) => _buildQRScannerBottomSheet(),
+                          );
+                        },
+                        child: Container(
+                          width: 60,
+                          height: 60,
+                          margin: const EdgeInsets.only(bottom: 40.0),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF8C1B0B),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.navigate_next,
+                            color: Color(0xFFF6FDFB),
+                            size: 32,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
-          ),
           if (_isProcessing)
             const Center(
-              child: CircularProgressIndicator(), // Hiển thị loading ở giữa
+              child: CircularProgressIndicator(),
             ),
           if (_isSuccess)
             Center(
-              child: Lottie.asset(
-                'assets/animations/success.json', // Hiển thị success animation ở giữa
-                width: 150,
-                height: 150,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Lottie.asset(
+                    'assets/animations/success.json',
+                    width: 150,
+                    height: 150,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    _isLogout ? 'Thank you!' : 'Success',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                ],
               ),
             ),
         ],

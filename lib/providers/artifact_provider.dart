@@ -13,6 +13,17 @@ class ArtifactProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
+  void setCurrentArtifact(dynamic artifact) {
+    if (artifact is Map<String, dynamic>) {
+      _currentArtifact = Artifact.fromJson(artifact);
+    } else if (artifact is Artifact) {
+      _currentArtifact = artifact;
+    } else {
+      throw ArgumentError('Invalid artifact type');
+    }
+    notifyListeners();
+  }
+
   Future<void> fetchArtifactByQRCode(String qrCode) async {
     _isLoading = true;
     _errorMessage = null;

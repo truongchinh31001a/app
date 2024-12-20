@@ -2,6 +2,7 @@ import 'package:app/screens/detail_story_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/story_provider.dart';
+import '../providers/security_provider.dart';
 
 class StoryScreen extends StatefulWidget {
   @override
@@ -34,6 +35,18 @@ class _StoryScreenState extends State<StoryScreen>
   @override
   Widget build(BuildContext context) {
     final storyProvider = Provider.of<StoryProvider>(context);
+    final securityProvider = Provider.of<SecurityProvider>(context);
+
+    // Chuyển đổi ngôn ngữ
+    final language = securityProvider.language == 'English' ? 'en' : 'vi';
+
+    // Tùy chỉnh text dựa trên ngôn ngữ
+    final String searchHint =
+        language == 'en' ? 'Search playlists...' : 'Tìm kiếm playlist...';
+    final String audioTabText = language == 'en' ? 'Audio' : 'Âm thanh';
+    final String videoTabText = language == 'en' ? 'Video' : 'Video';
+    final String noStoriesText =
+        language == 'en' ? 'No stories available' : 'Không có câu chuyện nào';
 
     // Lọc playlist theo từ khóa tìm kiếm
     final filteredPlaylists = storyProvider.playlists.entries
@@ -44,31 +57,25 @@ class _StoryScreenState extends State<StoryScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Story Playlists',
-          style: TextStyle(color: Colors.black), // Màu chữ đen
+        title: Text(
+          language == 'en' ? 'Story Playlists' : 'Danh sách Playlist',
+          style: const TextStyle(color: Colors.black),
         ),
-        backgroundColor: Colors.white, // Nền trắng
-        iconTheme: const IconThemeData(color: Colors.black), // Màu biểu tượng
+        backgroundColor: Colors.white,
+        iconTheme: const IconThemeData(color: Colors.black),
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: Colors.black, // Màu gạch chân
-          labelColor: Colors.black, // Màu tab được chọn
-          unselectedLabelColor: Colors.grey, // Màu tab chưa được chọn
-          overlayColor: MaterialStateProperty.resolveWith<Color?>((states) {
-            if (states.contains(MaterialState.pressed)) {
-              return Colors.grey.shade200; // Màu xám nhạt khi nhấn
-            }
-            return null; // Mặc định với trạng thái khác
-          }),
-          tabs: const [
-            Tab(icon: Icon(Icons.audiotrack), text: 'Audio'),
-            Tab(icon: Icon(Icons.videocam), text: 'Video'),
+          indicatorColor: Colors.black,
+          labelColor: Colors.black,
+          unselectedLabelColor: Colors.grey,
+          tabs: [
+            Tab(icon: const Icon(Icons.audiotrack), text: audioTabText),
+            Tab(icon: const Icon(Icons.videocam), text: videoTabText),
           ],
         ),
       ),
       body: Container(
-        color: Colors.white, // Nền trắng cho toàn bộ phần nội dung
+        color: Colors.white,
         child: Column(
           children: [
             // Ô tìm kiếm
@@ -83,13 +90,13 @@ class _StoryScreenState extends State<StoryScreen>
                 },
                 decoration: InputDecoration(
                   prefixIcon: const Icon(Icons.search, color: Colors.black),
-                  hintText: 'Tìm kiếm playlist...',
+                  hintText: searchHint,
                   hintStyle: const TextStyle(color: Colors.grey),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-                style: const TextStyle(color: Colors.black), // Màu chữ ô tìm kiếm
+                style: const TextStyle(color: Colors.black),
               ),
             ),
             // Danh sách playlist trong tab
@@ -102,12 +109,16 @@ class _StoryScreenState extends State<StoryScreen>
                     storyProvider,
                     filteredPlaylists,
                     'audio',
+                    language,
+                    noStoriesText,
                   ),
                   // Tab Video
                   _buildPlaylist(
                     storyProvider,
                     filteredPlaylists,
                     'video',
+                    language,
+                    noStoriesText,
                   ),
                 ],
               ),
@@ -118,11 +129,12 @@ class _StoryScreenState extends State<StoryScreen>
     );
   }
 
-  // Widget xây dựng playlist theo loại (audio/video)
   Widget _buildPlaylist(
     StoryProvider storyProvider,
     List<MapEntry<dynamic, List>> filteredPlaylists,
     String type,
+    String language,
+    String noStoriesText,
   ) {
     return storyProvider.isLoading
         ? const Center(child: CircularProgressIndicator())
@@ -134,15 +146,17 @@ class _StoryScreenState extends State<StoryScreen>
                 ),
               )
             : Container(
-                color: Colors.white, // Nền trắng cho toàn bộ danh sách
+                color: Colors.white,
                 child: ListView.builder(
                   itemCount: filteredPlaylists.length,
                   itemBuilder: (context, index) {
                     final areaId = filteredPlaylists[index].key;
-                    final playlistName = 'Playlist $areaId';
+                    final playlistName = language == 'en'
+                        ? 'Playlist $areaId'
+                        : 'Danh sách $areaId';
                     final playlistStories = filteredPlaylists[index]
                         .value
-                        .where((story) => _filterByType(story, type))
+                        .where((story) => _filterByType(story, type, language))
                         .toList();
 
                     return ExpansionTile(
@@ -151,7 +165,9 @@ class _StoryScreenState extends State<StoryScreen>
                         style: const TextStyle(color: Colors.black),
                       ),
                       subtitle: Text(
-                        '${playlistStories.length} ${type == 'audio' ? 'audio' : 'video'} stories available',
+                        playlistStories.isEmpty
+                            ? noStoriesText
+                            : '${playlistStories.length} ${language == 'en' ? 'stories available' : 'câu chuyện có sẵn'}',
                         style: const TextStyle(color: Colors.grey),
                       ),
                       children: playlistStories.map((story) {
@@ -170,7 +186,6 @@ class _StoryScreenState extends State<StoryScreen>
                               : const Icon(Icons.image_not_supported,
                                   color: Colors.black),
                           onTap: () {
-                            // Điều hướng tới màn hình chi tiết story
                             Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -187,12 +202,13 @@ class _StoryScreenState extends State<StoryScreen>
               );
   }
 
-  // Hàm lọc story theo loại (audio/video)
-  bool _filterByType(dynamic story, String type) {
+  bool _filterByType(dynamic story, String type, String language) {
     if (type == 'audio') {
-      return story.audioUrl['vi'] != null && story.audioUrl['vi'].isNotEmpty;
+      return story.audioUrl[language] != null &&
+          story.audioUrl[language]!.isNotEmpty;
     } else if (type == 'video') {
-      return story.videoUrl['vi'] != null && story.videoUrl['vi'].isNotEmpty;
+      return story.videoUrl[language] != null &&
+          story.videoUrl[language]!.isNotEmpty;
     }
     return false;
   }

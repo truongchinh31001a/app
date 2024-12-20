@@ -41,12 +41,6 @@ class _QRScannerScreenState extends State<QRScannerScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Quét QR', style: TextStyle(color: Colors.black)),
-        backgroundColor: Colors.white, // Nền trắng cho AppBar
-        elevation: 1, // Tạo hiệu ứng bóng nhẹ
-        iconTheme: const IconThemeData(color: Colors.black), // Màu icon là đen
-      ),
       body: Stack(
         children: [
           // Camera QR Scanner

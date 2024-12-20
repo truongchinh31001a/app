@@ -88,7 +88,7 @@ class CustomBottomNavBar extends StatelessWidget {
                 ),
                 BottomNavigationBarItem(
                   icon: Image.asset(
-                    'assets/icons/history.png',
+                    'assets/icons/settings.png',
                     width: 24,
                     height: 24,
                   ),
