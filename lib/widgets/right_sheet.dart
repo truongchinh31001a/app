@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:app/screens/lock_screen.dart';
+import 'package:app/screens/thank_you_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/security_provider.dart';
@@ -77,14 +78,13 @@ class _RightSheetState extends State<RightSheet> {
                 Navigator.of(context).pop(); // Đóng dialog
                 final securityProvider =
                     Provider.of<SecurityProvider>(context, listen: false);
-                await securityProvider.reset();
+                await securityProvider.reset(); // Đặt lại trạng thái bảo mật
                 Navigator.of(context).pop(); // Đóng RightSheet
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => const LockScreen(),
-                    settings: const RouteSettings(arguments: 'logout'),
-                  ),
+                      builder: (_) =>
+                          const ThankYouScreen()), // Điều hướng đến ThankYouScreen
                 );
               },
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),

@@ -27,17 +27,17 @@ class VideoWidget extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
 
-          return Stack(
-            alignment: Alignment.bottomCenter,
-            children: [
-              AspectRatio(
-                aspectRatio: provider.controller!.value.isInitialized
-                    ? provider.controller!.value.aspectRatio
-                    : 16 / 9,
-                child: VideoPlayer(provider.controller!),
-              ),
-              if (provider.showControls) _buildControls(provider, context),
-            ],
+          return AspectRatio(
+            aspectRatio: provider.controller!.value.isInitialized
+                ? provider.controller!.value.aspectRatio
+                : 16 / 9,
+            child: Stack(
+              alignment: Alignment.bottomCenter,
+              children: [
+                VideoPlayer(provider.controller!),
+                if (provider.showControls) _buildControls(provider, context),
+              ],
+            ),
           );
         },
       ),
@@ -115,6 +115,7 @@ class VideoWidget extends StatelessWidget {
       Future.microtask(() {
         videoProvider.controller?.setVolume(1.0);
         videoProvider.controller?.pause(); // Đảm bảo dừng video (nếu cần)
+        videoProvider.notifyListeners(); // Cập nhật lại giao diện
       });
     });
   }
@@ -154,43 +155,45 @@ class FullScreenVideo extends StatelessWidget {
   Widget _buildFullScreenControls(
       VideoProvider videoProvider, BuildContext context) {
     return Positioned(
-      // Cố định thanh điều khiển ở dưới
       left: 0,
       right: 0,
-      child: Container(
-        height: 60,
-        color: Colors.black.withOpacity(0.6),
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        child: Row(
-          children: [
-            IconButton(
-              icon: Icon(
-                videoProvider.isPlaying ? Icons.pause : Icons.play_arrow,
-                color: Colors.white,
+      bottom: 0,
+      child: SafeArea(
+        child: Container(
+          height: 60,
+          color: Colors.black.withOpacity(0.6),
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Row(
+            children: [
+              IconButton(
+                icon: Icon(
+                  videoProvider.isPlaying ? Icons.pause : Icons.play_arrow,
+                  color: Colors.white,
+                ),
+                onPressed: videoProvider.togglePlayPause,
               ),
-              onPressed: videoProvider.togglePlayPause,
-            ),
-            Expanded(
-              child: Slider(
-                value: videoProvider.controller!.value.position.inSeconds
-                    .clamp(
-                        0, videoProvider.controller!.value.duration.inSeconds)
-                    .toDouble(),
-                min: 0,
-                max: videoProvider.controller!.value.duration.inSeconds
-                    .toDouble(),
-                activeColor: Colors.white,
-                inactiveColor: Colors.grey,
-                onChanged: (value) {
-                  videoProvider.seekTo(Duration(seconds: value.toInt()));
-                },
+              Expanded(
+                child: Slider(
+                  value: videoProvider.controller!.value.position.inSeconds
+                      .clamp(
+                          0, videoProvider.controller!.value.duration.inSeconds)
+                      .toDouble(),
+                  min: 0,
+                  max: videoProvider.controller!.value.duration.inSeconds
+                      .toDouble(),
+                  activeColor: Colors.white,
+                  inactiveColor: Colors.grey,
+                  onChanged: (value) {
+                    videoProvider.seekTo(Duration(seconds: value.toInt()));
+                  },
+                ),
               ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.fullscreen_exit, color: Colors.white),
-              onPressed: () => Navigator.pop(context),
-            ),
-          ],
+              IconButton(
+                icon: const Icon(Icons.fullscreen_exit, color: Colors.white),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
         ),
       ),
     );

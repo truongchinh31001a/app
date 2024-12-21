@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../providers/security_provider.dart';
 import '../services/qr_ticket_service.dart';
+
+enum LockScreenState { idle, processing, success }
 
 class LockScreen extends StatefulWidget {
   const LockScreen({Key? key}) : super(key: key);
@@ -13,28 +16,13 @@ class LockScreen extends StatefulWidget {
 }
 
 class _LockScreenState extends State<LockScreen> {
-  bool _isProcessing = false;
-  bool _isSuccess = false;
-  bool _isLogout = false;
-  bool _isStartVisible = true;
+  LockScreenState _state = LockScreenState.idle;
   late MobileScannerController _cameraController;
 
   @override
   void initState() {
     super.initState();
-    _cameraController = MobileScannerController(); // Khởi tạo camera
-  }
-
-  /// Sử dụng phương thức didChangeDependencies để xử lý logic liên quan đến Provider
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-
-    // Nếu cần xử lý logic đặc biệt khi logout, sử dụng arguments
-    final args = ModalRoute.of(context)?.settings.arguments as String?;
-    if (args == 'logout') {
-      handleLogout(); // Gọi hàm xử lý logout
-    }
+    _cameraController = MobileScannerController();
   }
 
   @override
@@ -43,33 +31,9 @@ class _LockScreenState extends State<LockScreen> {
     super.dispose();
   }
 
-  /// Xử lý trạng thái logout
-  Future<void> handleLogout() async {
-    setState(() {
-      _isProcessing = false;
-      _isSuccess = true;
-      _isLogout = true; // Đặt trạng thái logout
-      _isStartVisible = false;
-    });
-
-    await Future.delayed(const Duration(seconds: 2));
-
-    if (mounted) {
-      setState(() {
-        _isLogout = false;
-        _isSuccess = false;
-        _isStartVisible = true; // Hiển thị lại giao diện ban đầu
-      });
-    }
-  }
-
-  /// Xử lý gọi API và trạng thái
   Future<void> _callApi(String qrCode) async {
     setState(() {
-      _isProcessing = true;
-      _isSuccess = false;
-      _isStartVisible = false;
-      _isLogout = false;
+      _state = LockScreenState.processing;
     });
 
     try {
@@ -90,8 +54,7 @@ class _LockScreenState extends State<LockScreen> {
           );
 
           setState(() {
-            _isProcessing = false;
-            _isSuccess = true;
+            _state = LockScreenState.success;
           });
 
           await Future.delayed(const Duration(seconds: 2));
@@ -110,17 +73,15 @@ class _LockScreenState extends State<LockScreen> {
         _showErrorSnackBar('Error processing QR code.');
       }
     } finally {
-      if (!_isSuccess && mounted) {
+      if (_state == LockScreenState.processing && mounted) {
         setState(() {
-          _isProcessing = false;
-          _isStartVisible = true;
+          _state = LockScreenState.idle;
         });
         _cameraController.start();
       }
     }
   }
 
-  /// Hiển thị thông báo lỗi
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -130,7 +91,6 @@ class _LockScreenState extends State<LockScreen> {
     );
   }
 
-  /// Hiển thị giao diện quét QR
   Widget _buildQRScannerBottomSheet() {
     return Container(
       height: MediaQuery.of(context).size.height * 0.5,
@@ -169,8 +129,8 @@ class _LockScreenState extends State<LockScreen> {
                     onDetect: (BarcodeCapture capture) {
                       final qrCode = capture.barcodes.first.rawValue;
                       if (qrCode != null) {
-                        Navigator.pop(context);
-                        _callApi(qrCode);
+                        Navigator.pop(context); // Đóng bottom sheet
+                        _callApi(qrCode); // Gọi API xử lý
                       }
                     },
                   ),
@@ -203,14 +163,14 @@ class _LockScreenState extends State<LockScreen> {
     );
   }
 
-  /// Xây dựng giao diện chính
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          if (_isStartVisible || _isProcessing || !_isLogout)
+          // Trạng thái "Idle" luôn hiện giao diện chính
+          if (_state == LockScreenState.idle || _state == LockScreenState.processing)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
               child: Column(
@@ -218,9 +178,9 @@ class _LockScreenState extends State<LockScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Padding(
-                    padding: EdgeInsets.only(top: 60.0, bottom: 30.0),
+                    padding: EdgeInsets.only(top: 60.0, bottom: 10.0),
                     child: Text(
-                      'Welcome to the Museum',
+                      'Bảo tàng Y Khoa Phan Châu Trinh',
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
@@ -228,44 +188,60 @@ class _LockScreenState extends State<LockScreen> {
                       ),
                     ),
                   ),
+                  Text(
+                    'chào mừng quý khách',
+                    style: GoogleFonts.montserrat(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Container(
+                    height: 4,
+                    width: 150,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF8C1B0B),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
                   const Spacer(),
-                  if (_isStartVisible)
-                    Center(
-                      child: GestureDetector(
-                        onTap: () {
-                          showModalBottomSheet(
-                            context: context,
-                            isDismissible: false,
-                            enableDrag: false,
-                            isScrollControlled: true,
-                            backgroundColor: Colors.transparent,
-                            builder: (_) => _buildQRScannerBottomSheet(),
-                          );
-                        },
-                        child: Container(
-                          width: 60,
-                          height: 60,
-                          margin: const EdgeInsets.only(bottom: 40.0),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF8C1B0B),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(
-                            Icons.navigate_next,
-                            color: Color(0xFFF6FDFB),
-                            size: 32,
-                          ),
+                  Center(
+                    child: GestureDetector(
+                      onTap: () {
+                        showModalBottomSheet(
+                          context: context,
+                          isDismissible: false,
+                          enableDrag: false,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (_) => _buildQRScannerBottomSheet(),
+                        );
+                      },
+                      child: Container(
+                        width: 60,
+                        height: 60,
+                        margin: const EdgeInsets.only(bottom: 40.0),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF8C1B0B),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.navigate_next,
+                          color: Color(0xFFF6FDFB),
+                          size: 32,
                         ),
                       ),
                     ),
+                  ),
                 ],
               ),
             ),
-          if (_isProcessing)
+          if (_state == LockScreenState.processing)
             const Center(
               child: CircularProgressIndicator(),
             ),
-          if (_isSuccess)
+          if (_state == LockScreenState.success)
             Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -276,9 +252,9 @@ class _LockScreenState extends State<LockScreen> {
                     height: 150,
                   ),
                   const SizedBox(height: 16),
-                  Text(
-                    _isLogout ? 'Thank you!' : 'Success',
-                    style: const TextStyle(
+                  const Text(
+                    'Success',
+                    style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: Colors.black,

@@ -17,22 +17,30 @@ class VideoProvider with ChangeNotifier {
 
   /// Khởi tạo video
   Future<void> initVideo(String url) async {
-    if (_controller != null && _controller!.dataSource == url)
-      return; // Tránh khởi tạo lại
+    if (_controller != null && _controller!.dataSource == url) return; // Tránh khởi tạo lại cùng một URL
 
     _isLoading = true;
     notifyListeners();
 
-    _controller?.dispose(); // Dọn sạch controller cũ nếu có
+    // Dọn sạch controller cũ nếu có
+    _hideControlsTimer?.cancel();
+    _controller?.dispose();
     _controller = VideoPlayerController.network(url);
 
     try {
       await _controller!.initialize();
       _isLoading = false;
       _controller!.setLooping(false);
+
+      // Lắng nghe các thay đổi trạng thái của video
       _controller!.addListener(() {
-        notifyListeners();
+        // Chỉ thông báo nếu controller được khởi tạo
+        if (_controller?.value.isInitialized == true) {
+          notifyListeners();
+        }
       });
+
+      // Bắt đầu đếm ngược ẩn controls
       _startHideControlsTimer();
     } catch (e) {
       _isLoading = false;
@@ -51,6 +59,7 @@ class VideoProvider with ChangeNotifier {
     } else {
       _controller!.play();
     }
+
     _startHideControlsTimer();
     notifyListeners();
   }
@@ -62,6 +71,12 @@ class VideoProvider with ChangeNotifier {
     } else {
       _showControls = !_showControls;
     }
+
+    // Nếu controls hiển thị, đặt lại bộ đếm
+    if (_showControls) {
+      _startHideControlsTimer();
+    }
+
     notifyListeners();
   }
 
@@ -76,7 +91,8 @@ class VideoProvider with ChangeNotifier {
 
   /// Seek đến vị trí cụ thể
   void seekTo(Duration position) {
-    if (_controller == null || position > _controller!.value.duration) return;
+    if (_controller == null || !_controller!.value.isInitialized) return;
+    if (position > _controller!.value.duration) return;
 
     _controller!.seekTo(position);
     _startHideControlsTimer();
@@ -105,12 +121,15 @@ class VideoProvider with ChangeNotifier {
     } catch (e) {
       debugPrint("Lỗi khi thoát fullscreen: $e");
     }
+
     notifyListeners();
   }
 
   /// Dọn dẹp tài nguyên
   void disposeVideo() {
     _hideControlsTimer?.cancel();
+    _controller?.removeListener(() {}); // Xóa tất cả listener
     _controller?.dispose();
+    _controller = null;
   }
 }

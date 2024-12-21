@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'providers/security_provider.dart';
 import 'providers/story_provider.dart';
@@ -12,6 +13,12 @@ import 'screens/lock_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Giới hạn app ở chế độ dọc
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
 
   // Tạo instance của SecurityProvider và khôi phục trạng thái
   final securityProvider = SecurityProvider();
