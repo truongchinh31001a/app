@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'package:app/services/shared_state.dart';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 
 class AudioProvider with ChangeNotifier {
   final AudioPlayer _audioPlayer = AudioPlayer();
+  final SharedState sharedState = SharedState();
 
   bool _isPlaying = false;
   bool _isLoading = false;
@@ -13,7 +15,7 @@ class AudioProvider with ChangeNotifier {
   Duration _totalDuration = Duration.zero;
 
   String _audioUrl = '';
-  Timer? _completionTimer; // Timer để kiểm tra gần kết thúc
+  Timer? _completionTimer;
 
   // Getters
   String get audioUrl => _audioUrl;
@@ -22,19 +24,27 @@ class AudioProvider with ChangeNotifier {
   Duration get currentPosition => _currentPosition;
   Duration get totalDuration => _totalDuration;
 
+  AudioProvider() {
+    sharedState.activeMediaNotifier.addListener(_handleActiveMediaChange);
+  }
+
   /// Khởi tạo audio mới
   Future<void> initAudio(String url) async {
-    if (_audioUrl == url) return;
+    if (_audioUrl == url)
+      return; // Nếu audio URL không thay đổi, không cần khởi tạo lại
+
     _resetState();
+    sharedState.setActiveMedia('audio'); // Đặt trạng thái là audio khi khởi tạo
     _audioUrl = url;
     _isLoading = true;
     notifyListeners();
 
     try {
       await _audioPlayer.setSourceUrl(url).timeout(
-        const Duration(seconds: 20),
-        onTimeout: () => throw TimeoutException("Kết nối quá lâu, vui lòng thử lại!"),
-      );
+            const Duration(seconds: 20),
+            onTimeout: () =>
+                throw TimeoutException("Kết nối quá lâu, vui lòng thử lại!"),
+          );
 
       _setupListeners();
       _isLoading = false;
@@ -47,7 +57,7 @@ class AudioProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  /// Thiết lập listeners
+  /// Thiết lập các sự kiện lắng nghe cho AudioPlayer
   void _setupListeners() {
     _audioPlayer.onDurationChanged.listen((duration) {
       if (duration > Duration.zero) {
@@ -60,7 +70,8 @@ class AudioProvider with ChangeNotifier {
       _currentPosition = position;
 
       // Gần kết thúc: còn 0.5 giây
-      if (_totalDuration - _currentPosition <= const Duration(milliseconds: 500) &&
+      if (_totalDuration - _currentPosition <=
+              const Duration(milliseconds: 500) &&
           !_isNearCompletion) {
         _isNearCompletion = true;
         _prepareForReplay();
@@ -70,6 +81,7 @@ class AudioProvider with ChangeNotifier {
 
     _audioPlayer.onPlayerComplete.listen((_) {
       _isPlaying = false;
+      sharedState.setActiveMedia(null); // Clear trạng thái khi audio hoàn thành
       notifyListeners();
     });
   }
@@ -95,29 +107,37 @@ class AudioProvider with ChangeNotifier {
 
   /// Phát và tạm dừng âm thanh
   void togglePlayPause() {
-    if (_currentPosition == Duration.zero || _isNearCompletion) {
-      _isNearCompletion = false;
-      _play();
-    } else if (_isPlaying) {
+    if (_isPlaying) {
       _pause();
+      sharedState.setActiveMedia(null); // Clear trạng thái khi tạm dừng
     } else {
+      sharedState.setActiveMedia('audio'); // Đặt trạng thái là audio
       _play();
     }
   }
 
+  /// Phát âm thanh
   Future<void> _play() async {
     await _audioPlayer.resume();
     _isPlaying = true;
     notifyListeners();
   }
 
+  /// Tạm dừng âm thanh
   Future<void> _pause() async {
     await _audioPlayer.pause();
     _isPlaying = false;
     notifyListeners();
   }
 
-  /// Seek tiến/lùi
+  /// Lắng nghe thay đổi trạng thái từ SharedState
+  Future<void> _handleActiveMediaChange() async {
+    if (sharedState.activeMedia != 'audio' && _isPlaying) {
+      _pause(); // Tự động dừng nếu media khác (video) đang phát
+    }
+  }
+
+  /// Seek đến một vị trí mới
   Future<void> seek(int seconds) async {
     final newPosition = _currentPosition + Duration(seconds: seconds);
     if (newPosition >= Duration.zero && newPosition <= _totalDuration) {
@@ -126,7 +146,7 @@ class AudioProvider with ChangeNotifier {
     }
   }
 
-  /// Reset trạng thái
+  /// Reset trạng thái của AudioProvider
   void _resetState() {
     _audioUrl = '';
     _isPlaying = false;
@@ -136,8 +156,10 @@ class AudioProvider with ChangeNotifier {
     _isNearCompletion = false;
   }
 
+  /// Dọn dẹp tài nguyên
   @override
   void dispose() {
+    sharedState.activeMediaNotifier.removeListener(_handleActiveMediaChange);
     _audioPlayer.dispose();
     _completionTimer?.cancel();
     super.dispose();

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:app/services/shared_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
@@ -8,6 +9,11 @@ class VideoProvider with ChangeNotifier {
   bool _isLoading = true;
   bool _showControls = true;
   Timer? _hideControlsTimer;
+  final SharedState sharedState = SharedState();
+
+  VideoProvider() {
+    sharedState.activeMediaNotifier.addListener(_handleActiveMediaChange);
+  }
 
   // Getters
   VideoPlayerController? get controller => _controller;
@@ -17,7 +23,8 @@ class VideoProvider with ChangeNotifier {
 
   /// Khởi tạo video
   Future<void> initVideo(String url) async {
-    if (_controller != null && _controller!.dataSource == url) return; // Tránh khởi tạo lại cùng một URL
+    if (_controller != null && _controller!.dataSource == url)
+      return; // Tránh khởi tạo lại cùng một URL
 
     _isLoading = true;
     notifyListeners();
@@ -56,7 +63,9 @@ class VideoProvider with ChangeNotifier {
 
     if (_controller!.value.isPlaying) {
       _controller!.pause();
+      sharedState.setActiveMedia(null); // Xóa trạng thái nếu video tạm dừng
     } else {
+      sharedState.setActiveMedia('video'); // Đặt trạng thái là 'video'
       _controller!.play();
     }
 
@@ -78,6 +87,13 @@ class VideoProvider with ChangeNotifier {
     }
 
     notifyListeners();
+  }
+
+  void _handleActiveMediaChange() {
+    if (sharedState.activeMedia != 'video' && isPlaying) {
+      _controller?.pause(); // Tự động dừng nếu media khác (audio) đang phát
+      notifyListeners();
+    }
   }
 
   /// Tự động ẩn controls sau 3 giây
@@ -127,6 +143,7 @@ class VideoProvider with ChangeNotifier {
 
   /// Dọn dẹp tài nguyên
   void disposeVideo() {
+    sharedState.activeMediaNotifier.removeListener(_handleActiveMediaChange);
     _hideControlsTimer?.cancel();
     _controller?.removeListener(() {}); // Xóa tất cả listener
     _controller?.dispose();

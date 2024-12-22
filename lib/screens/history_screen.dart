@@ -37,7 +37,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
       // Lấy visitor_id và language từ SecurityProvider
       final visitorId = securityProvider.visitorId;
       final languageKey =
-          (securityProvider.language ?? 'Vietnamese') == 'English' ? 'en' : 'vi';
+          (securityProvider.language ?? 'Vietnamese') == 'English'
+              ? 'en'
+              : 'vi';
 
       if (visitorId == null) {
         throw Exception(languageKey == 'en'
@@ -79,7 +81,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
   /// Định dạng thời gian quét
   String _formatScanTime(String scanTime) {
     try {
-      final dateTime = DateTime.parse(scanTime).toLocal(); // Chuyển sang local time
+      final dateTime =
+          DateTime.parse(scanTime).toLocal(); // Chuyển sang local time
       return DateFormat('HH:mm dd/MM/yyyy').format(dateTime);
     } catch (e) {
       return scanTime; // Trả về chuỗi gốc nếu lỗi
@@ -93,12 +96,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
         (securityProvider.language ?? 'Vietnamese') == 'English' ? 'en' : 'vi';
 
     // Text hiển thị dựa trên ngôn ngữ
-    final String titleText =
-        languageKey == 'en' ? 'History' : 'Lịch sử';
+    final String titleText = languageKey == 'en' ? 'History' : 'Lịch sử';
     final String noHistoryText =
         languageKey == 'en' ? 'No history available.' : 'Không có lịch sử.';
-    final String errorText =
-        languageKey == 'en' ? 'Error' : 'Lỗi';
+    final String errorText = languageKey == 'en' ? 'Error' : 'Lỗi';
     final String scannedOnText =
         languageKey == 'en' ? 'Scanned on:' : 'Quét vào lúc:';
 
@@ -132,7 +133,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         return ListTile(
                           leading: artifact['image_url'] != null
                               ? Image.network(
-                                  'http://192.168.1.86:3000${artifact['image_url']}',
+                                  'http://192.168.1.4:3000${artifact['image_url']}',
                                   width: 50,
                                   height: 50,
                                   fit: BoxFit.cover,

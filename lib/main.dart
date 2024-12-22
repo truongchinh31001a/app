@@ -27,7 +27,8 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => securityProvider), // Security Provider
+        ChangeNotifierProvider(
+            create: (_) => securityProvider), // Security Provider
         ChangeNotifierProvider(
           create: (_) => StoryProvider(
             storyService: StoryService(),
