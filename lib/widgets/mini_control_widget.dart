@@ -1,116 +1,109 @@
-// import 'package:app/screens/detail_artifact_screen.dart';
-// import 'package:app/screens/detail_story_screen.dart';
-// import 'package:flutter/material.dart';
-// import 'package:provider/provider.dart';
-// import '../providers/audio_provider.dart';
-// import '../providers/video_provider.dart';
+import 'package:app/providers/audio_provider.dart';
+import 'package:app/providers/details_manager.dart';
+import 'package:app/providers/video_provider.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-// class MiniMediaControllerWidget extends StatelessWidget {
-//   const MiniMediaControllerWidget({Key? key}) : super(key: key);
+class MiniControl extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final detailsManager = Provider.of<DetailsManager>(context);
 
-//   @override
-//   Widget build(BuildContext context) {
-//     final audioProvider = Provider.of<AudioProvider>(context);
-//     final videoProvider = Provider.of<VideoProvider>(context);
+    if (detailsManager.currentType == null) {
+      return SizedBox.shrink(); // Không hiển thị nếu không có trạng thái
+    }
 
-//     // Kiểm tra xem có nội dung audio/video đang phát không
-//     final isAudioPlaying = audioProvider.audioUrl.isNotEmpty;
-//     final isVideoPlaying = videoProvider.videoUrl.isNotEmpty;
+    final type = detailsManager.currentType!;
+    final data = detailsManager.currentData!;
+    final String? audioUrl = data['audioUrl'];
+    final String? videoUrl = data['videoUrl'];
 
-//     // Nếu không có nội dung audio/video đang phát, không hiển thị Mini Controller
-//     if (!isAudioPlaying && !isVideoPlaying) {
-//       return const SizedBox.shrink();
-//     }
+    return Positioned(
+      bottom: 20,
+      left: 20,
+      right: 20,
+      child: Container(
+        padding: const EdgeInsets.all(16.0),
+        decoration: BoxDecoration(
+          color: Colors.blue.shade600,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          children: [
+            // Audio/Video Controls
+            if (detailsManager.hasAudio) _buildAudioControls(context, audioUrl!),
+            if (detailsManager.hasVideo) _buildVideoControls(context, videoUrl!),
 
-//     // Dữ liệu hiển thị
-//     final isPlaying = isAudioPlaying
-//         ? audioProvider.isPlaying
-//         : videoProvider.controller?.value.isPlaying ?? false;
-//     final title = isAudioPlaying
-//         ? (audioProvider.currentStory?.name ?? audioProvider.currentArtifact?.name ?? "Audio Playing")
-//         : (videoProvider.currentStory?.name ?? videoProvider.currentArtifact?.name ?? "Video Playing");
+            const SizedBox(height: 8),
 
-//     return Container(
-//       margin: const EdgeInsets.all(8.0),
-//       padding: const EdgeInsets.all(12.0),
-//       decoration: BoxDecoration(
-//         color: Colors.white,
-//         borderRadius: BorderRadius.circular(8),
-//         boxShadow: [
-//           BoxShadow(
-//             color: Colors.grey.withOpacity(0.2),
-//             blurRadius: 4,
-//             spreadRadius: 1,
-//             offset: const Offset(0, 2),
-//           ),
-//         ],
-//       ),
-//       child: Row(
-//         children: [
-//           // Nút Play/Pause
-//           IconButton(
-//             icon: Icon(
-//               isPlaying ? Icons.pause : Icons.play_arrow,
-//               color: Colors.black,
-//               size: 32,
-//             ),
-//             onPressed: isAudioPlaying
-//                 ? audioProvider.togglePlayPause
-//                 : () {
-//                     if (isPlaying) {
-//                       videoProvider.controller?.pause();
-//                     } else {
-//                       videoProvider.controller?.play();
-//                     }
-//                   },
-//           ),
-//           const SizedBox(width: 12),
+            // Back to Details Button
+            GestureDetector(
+              onTap: () {
+                if (type == 'artifact') {
+                  Navigator.pushNamed(context, '/artifact'); // Điều hướng Artifact
+                } else if (type == 'story') {
+                  Navigator.pushNamed(context, '/story'); // Điều hướng Story
+                }
+              },
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Text(
+                    'Back to Details',
+                    style: TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                  SizedBox(width: 8),
+                  Icon(Icons.arrow_forward, color: Colors.white),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-//           // Thông tin nội dung
-//           Expanded(
-//             child: Text(
-//               title,
-//               style: const TextStyle(
-//                 fontSize: 14,
-//                 fontWeight: FontWeight.bold,
-//                 overflow: TextOverflow.ellipsis,
-//               ),
-//               maxLines: 1,
-//             ),
-//           ),
+  /// Audio Controls (Pause/Play)
+  Widget _buildAudioControls(BuildContext context, String audioUrl) {
+    final audioProvider = Provider.of<AudioProvider>(context);
 
-//           // Nút mở chi tiết
-//           IconButton(
-//             icon: const Icon(Icons.open_in_new, color: Colors.black),
-//             onPressed: () {
-//               if (isAudioPlaying) {
-//                 _navigateToDetail(context, audioProvider);
-//               } else {
-//                 _navigateToDetail(context, videoProvider);
-//               }
-//             },
-//           ),
-//         ],
-//       ),
-//     );
-//   }
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        IconButton(
+          onPressed: audioProvider.togglePlayPause,
+          icon: Icon(
+            audioProvider.isPlaying ? Icons.pause : Icons.play_arrow,
+            color: Colors.white,
+          ),
+        ),
+        const Text(
+          'Audio Playing',
+          style: TextStyle(color: Colors.white),
+        ),
+      ],
+    );
+  }
 
-//   /// Điều hướng đến màn hình chi tiết
-//   void _navigateToDetail(BuildContext context, dynamic provider) {
-//     if (provider.currentScreenType == 'story' && provider.currentStory != null) {
-//       Navigator.push(
-//         context,
-//         MaterialPageRoute(
-//           builder: (context) => DetailsStoryScreen(story: provider.currentStory!),
-//         ),
-//       );
-//     } else if (provider.currentScreenType == 'artifact' && provider.currentArtifact != null) {
-//       Navigator.push(
-//         context,
-//         MaterialPageRoute(
-//           builder: (context) => ArtifactDetailScreen(artifact: provider.currentArtifact!),
-//         ),
-//       );
-//     }
-//   }
-// }
+  /// Video Controls (Pause/Play)
+  Widget _buildVideoControls(BuildContext context, String videoUrl) {
+    final videoProvider = Provider.of<VideoProvider>(context);
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        IconButton(
+          onPressed: videoProvider.togglePlayPause,
+          icon: Icon(
+            videoProvider.isPlaying ? Icons.pause : Icons.play_arrow,
+            color: Colors.white,
+          ),
+        ),
+        const Text(
+          'Video Playing',
+          style: TextStyle(color: Colors.white),
+        ),
+      ],
+    );
+  }
+}

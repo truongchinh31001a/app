@@ -1,3 +1,4 @@
+import 'package:app/providers/details_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -37,6 +38,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => ArtifactProvider()),
         ChangeNotifierProvider(create: (_) => AudioProvider()),
         ChangeNotifierProvider(create: (_) => VideoProvider()),
+        ChangeNotifierProvider(create: (_) => DetailsManager()),
       ],
       child: MuseumApp(),
     ),

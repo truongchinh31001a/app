@@ -3,6 +3,7 @@ import 'package:app/widgets/video_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/story.dart';
+import '../providers/details_manager.dart';
 import '../providers/security_provider.dart';
 
 class DetailsStoryScreen extends StatelessWidget {
@@ -26,6 +27,7 @@ class DetailsStoryScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     // Lấy ngôn ngữ hiện tại từ SecurityProvider
     final securityProvider = Provider.of<SecurityProvider>(context);
+    final detailsManager = Provider.of<DetailsManager>(context, listen: false); // Tích hợp DetailsManager
     final language = _mapLanguage(securityProvider.language);
 
     // Dữ liệu dựa trên ngôn ngữ
@@ -34,6 +36,16 @@ class DetailsStoryScreen extends StatelessWidget {
     final String imageUrl = story.imageUrl;
     final String videoPath = story.videoUrl[language] ?? '';
     final String audioPath = story.audioUrl[language] ?? '';
+
+    // Lưu trạng thái vào DetailsManager
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      detailsManager.setDetails('story', {
+        'storyId': story.storyId,
+        'name': story.name,
+        'audioUrl': audioPath,
+        'videoUrl': videoPath,
+      });
+    });
 
     return Scaffold(
       backgroundColor: Colors.white,

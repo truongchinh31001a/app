@@ -4,6 +4,7 @@ import 'package:app/widgets/video_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/artifact_provider.dart';
+import '../providers/details_manager.dart';
 import '../providers/security_provider.dart';
 
 class ArtifactDetailScreen extends StatelessWidget {
@@ -25,10 +26,11 @@ class ArtifactDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final artifactProvider = Provider.of<ArtifactProvider>(context);
     final securityProvider = Provider.of<SecurityProvider>(context);
-    final artifactLogService = ArtifactLogService(); // Tạo service logging
+    final detailsManager = Provider.of<DetailsManager>(context, listen: false); // Tích hợp DetailsManager
+    final artifactLogService = ArtifactLogService(); // Service logging
     final artifact = artifactProvider.currentArtifact;
 
-    // Lấy ngôn ngữ từ `SecurityProvider`
+    // Lấy ngôn ngữ từ SecurityProvider
     final language = _mapLanguage(securityProvider.language);
 
     // Loading State
@@ -56,7 +58,7 @@ class ArtifactDetailScreen extends StatelessWidget {
       );
     }
 
-    // Gọi API log scan sau khi giao diện được dựng
+    // Gọi API log scan và lưu trạng thái Artifact vào DetailsManager
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
         final visitorId = securityProvider.visitorId;
@@ -66,6 +68,14 @@ class ArtifactDetailScreen extends StatelessWidget {
             visitorId: visitorId,
           );
         }
+
+        // Lưu trạng thái vào DetailsManager
+        detailsManager.setDetails('artifact', {
+          'artifactId': artifact.artifactId,
+          'name': artifact.name,
+          'audioUrl': artifact.audioUrl[language],
+          'videoUrl': artifact.videoUrl[language],
+        });
       } catch (e) {
         print("Error logging artifact scan: $e");
       }
@@ -79,7 +89,7 @@ class ArtifactDetailScreen extends StatelessWidget {
     final String imageUrl = artifact.imageUrl;
 
     return Scaffold(
-      backgroundColor: Colors.white, // Đặt màu nền trắng
+      backgroundColor: Colors.white,
       appBar: _buildAppBar(context, artifact.name),
       body: Stack(
         children: [
@@ -111,15 +121,15 @@ class ArtifactDetailScreen extends StatelessWidget {
             ],
           ),
 
-          // BOTTOM: AudioWidget (chỉ khi có audioUrl)
+          // BOTTOM: AudioWidget
           if (audioUrl.isNotEmpty)
             Positioned(
               left: 0,
               right: 0,
-              bottom: 30, // Margin từ đáy
+              bottom: 30,
               child: Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16.0),
-                height: 180, // Cố định chiều cao
+                height: 180,
                 child: AudioWidget(
                   audioUrl: 'http://192.168.1.86:3000$audioUrl',
                 ),
@@ -147,7 +157,7 @@ class ArtifactDetailScreen extends StatelessWidget {
         title,
         style: const TextStyle(color: Colors.black),
       ),
-      backgroundColor: Colors.white, // Đặt màu nền AppBar trắng
+      backgroundColor: Colors.white,
       elevation: 0,
       iconTheme: const IconThemeData(color: Colors.black),
       leading: IconButton(
