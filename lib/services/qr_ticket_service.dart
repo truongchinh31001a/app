@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class QRTicketService {
-  static const String baseUrl = 'http://192.168.1.4:3000/api/system/tickets';
+  static const String baseUrl = 'http://192.168.1.86:3000/api/system/tickets';
 
   // Gọi API để quét vé
   static Future<Map<String, dynamic>> scanTicket(String qrCode) async {

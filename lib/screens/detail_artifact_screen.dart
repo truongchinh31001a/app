@@ -87,7 +87,7 @@ class ArtifactDetailScreen extends StatelessWidget {
             children: [
               // TOP: Video hoặc Hình ảnh
               if (videoUrl.isNotEmpty)
-                VideoWidget(videoUrl: 'http://192.168.1.4:3000$videoUrl')
+                VideoWidget(videoUrl: 'http://192.168.1.86:3000$videoUrl')
               else if (imageUrl.isNotEmpty)
                 _buildTopImage(imageUrl),
 
@@ -121,7 +121,7 @@ class ArtifactDetailScreen extends StatelessWidget {
                 margin: const EdgeInsets.symmetric(horizontal: 16.0),
                 height: 180, // Cố định chiều cao
                 child: AudioWidget(
-                  audioUrl: 'http://192.168.1.4:3000$audioUrl',
+                  audioUrl: 'http://192.168.1.86:3000$audioUrl',
                 ),
               ),
             ),
@@ -133,7 +133,7 @@ class ArtifactDetailScreen extends StatelessWidget {
   /// Hiển thị hình ảnh khi không có Video
   Widget _buildTopImage(String imageUrl) {
     return Image.network(
-      'http://192.168.1.4:3000$imageUrl',
+      'http://192.168.1.86:3000$imageUrl',
       fit: BoxFit.cover,
       width: double.infinity,
       height: 200,

@@ -178,7 +178,7 @@ class _StoryScreenState extends State<StoryScreen>
                           ),
                           leading: story.imageUrl.isNotEmpty
                               ? Image.network(
-                                  'http://192.168.1.4:3000${story.imageUrl}',
+                                  'http://192.168.1.86:3000${story.imageUrl}',
                                   width: 50,
                                   height: 50,
                                   fit: BoxFit.cover,
