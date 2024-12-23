@@ -1,0 +1,21 @@
+workflows:
+  build-app:
+    name: Build iOS and Android
+    environment:
+      flutter: stable # Hoặc chọn phiên bản cụ thể như 3.13.8
+      xcode: latest   # Sử dụng phiên bản Xcode mới nhất
+    scripts:
+      # Cài đặt các dependency của Flutter
+      - name: Get Flutter dependencies
+        script: flutter pub get
+      # Build app cho Android
+      - name: Build Android APK
+        script: flutter build apk --release
+      # Build app cho iOS
+      - name: Build iOS
+        script: flutter build ios --release --no-codesign
+    artifacts:
+      # Lưu trữ file build iOS và Android
+      - build/**/outputs/**/*.apk
+      - build/ios/iphoneos/*.ipa
+    
