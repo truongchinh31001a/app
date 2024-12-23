@@ -8,6 +8,8 @@ workflows:
       # Cài đặt các dependency của Flutter
       - name: Get Flutter dependencies
         script: flutter pub get
+      - name: Install iOS dependencies
+        script: cd ios && pod install
       # Build app cho Android
       - name: Build Android APK
         script: flutter build apk --release
