@@ -1,8 +1,12 @@
 platform :ios, '15.5'
 
+# Ignore all warnings from all pods
+inhibit_all_warnings!
+
 target 'Runner' do
   use_frameworks!
   use_modular_headers!
 
-  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+  # Thêm dòng này để tích hợp Flutter SDK
+  eval(File.read(File.join(File.dirname(__FILE__), 'Flutter', 'podhelper.rb')))
 end
