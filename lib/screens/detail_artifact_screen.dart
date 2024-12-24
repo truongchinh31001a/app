@@ -3,11 +3,12 @@ import 'package:app/widgets/audio_widget.dart';
 import 'package:app/widgets/video_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../providers/artifact_provider.dart';
-import '../providers/details_manager.dart';
 import '../providers/security_provider.dart';
 
 class ArtifactDetailScreen extends StatelessWidget {
+  
   const ArtifactDetailScreen({Key? key}) : super(key: key);
 
   /// Ánh xạ `language` từ SecurityProvider sang mã ngôn ngữ
@@ -26,11 +27,9 @@ class ArtifactDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final artifactProvider = Provider.of<ArtifactProvider>(context);
     final securityProvider = Provider.of<SecurityProvider>(context);
-    final detailsManager = Provider.of<DetailsManager>(context, listen: false); // Tích hợp DetailsManager
     final artifactLogService = ArtifactLogService(); // Service logging
-    final artifact = artifactProvider.currentArtifact;
 
-    // Lấy ngôn ngữ từ SecurityProvider
+    final artifact = artifactProvider.currentArtifact;
     final language = _mapLanguage(securityProvider.language);
 
     // Loading State
@@ -58,7 +57,7 @@ class ArtifactDetailScreen extends StatelessWidget {
       );
     }
 
-    // Gọi API log scan và lưu trạng thái Artifact vào DetailsManager
+    // Gọi API log scan
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
         final visitorId = securityProvider.visitorId;
@@ -68,16 +67,8 @@ class ArtifactDetailScreen extends StatelessWidget {
             visitorId: visitorId,
           );
         }
-
-        // Lưu trạng thái vào DetailsManager
-        detailsManager.setDetails('artifact', {
-          'artifactId': artifact.artifactId,
-          'name': artifact.name,
-          'audioUrl': artifact.audioUrl[language],
-          'videoUrl': artifact.videoUrl[language],
-        });
       } catch (e) {
-        print("Error logging artifact scan: $e");
+        debugPrint("Error logging artifact scan: $e");
       }
     });
 
@@ -97,7 +88,11 @@ class ArtifactDetailScreen extends StatelessWidget {
             children: [
               // TOP: Video hoặc Hình ảnh
               if (videoUrl.isNotEmpty)
-                VideoWidget(videoUrl: 'http://192.168.1.86:3000$videoUrl')
+                VideoWidget(
+                  videoUrl: 'http://192.168.1.86:3000$videoUrl',
+                  sourceId: artifact.artifactId,
+                  sourceType: 'artifact',
+                )
               else if (imageUrl.isNotEmpty)
                 _buildTopImage(imageUrl),
 
@@ -132,6 +127,8 @@ class ArtifactDetailScreen extends StatelessWidget {
                 height: 180,
                 child: AudioWidget(
                   audioUrl: 'http://192.168.1.86:3000$audioUrl',
+                  id: artifact.artifactId,
+                  type: 'artifact',
                 ),
               ),
             ),

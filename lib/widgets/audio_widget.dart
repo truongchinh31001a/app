@@ -4,18 +4,29 @@ import '../providers/audio_provider.dart';
 
 class AudioWidget extends StatelessWidget {
   final String audioUrl;
+  final int id; // ID của media (story hoặc artifact), kiểu `int`
+  final String type; // Loại media: 'artifact' hoặc 'story'
 
   const AudioWidget({
     Key? key,
     required this.audioUrl,
+    required this.id,
+    required this.type,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final audioProvider = Provider.of<AudioProvider>(context);
 
-    if (audioProvider.audioUrl != audioUrl) {
-      Future.microtask(() => audioProvider.initAudio(audioUrl));
+    if (audioProvider.audioUrl != audioUrl || audioProvider.sourceId != id) {
+      // Khởi tạo audio với id và type nếu URL hoặc ID không khớp
+      Future.microtask(() {
+        audioProvider.initAudio(
+          url: audioUrl,
+          id: id,
+          type: type,
+        );
+      });
     }
 
     return SizedBox(
@@ -40,10 +51,12 @@ class AudioWidget extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (audioProvider.isLoading) ...[
+              // Hiển thị trạng thái đang tải
               const CircularProgressIndicator(),
               const SizedBox(height: 10),
               const Text("Đang tải âm thanh..."),
             ] else if (audioProvider.totalDuration == Duration.zero) ...[
+              // Khi dữ liệu chưa sẵn sàng
               const SizedBox(height: 20),
               const Text("Đang cập nhật dữ liệu âm thanh..."),
             ] else ...[
@@ -54,47 +67,52 @@ class AudioWidget extends StatelessWidget {
                     .toDouble(),
                 min: 0,
                 max: audioProvider.totalDuration.inSeconds.toDouble(),
-                activeColor: Colors.black, // Màu thanh tiến trình (đã chạy)
-                inactiveColor: Colors.grey, // Màu thanh tiến trình (chưa chạy)
-                onChanged: (value) => audioProvider.seek(
-                  (value).toInt() - audioProvider.currentPosition.inSeconds,
-                ),
+                activeColor: Colors.blue,
+                inactiveColor: Colors.grey,
+                onChanged: (value) {
+                  // Tua đến vị trí mới
+                  final diff = (value.toInt() - audioProvider.currentPosition.inSeconds);
+                  audioProvider.seek(diff);
+                },
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     _formatDuration(audioProvider.currentPosition),
-                    style: const TextStyle(color: Colors.black), // Màu chữ đen
+                    style: const TextStyle(color: Colors.black),
                   ),
                   Text(
                     _formatDuration(audioProvider.totalDuration),
-                    style: const TextStyle(color: Colors.black), // Màu chữ đen
+                    style: const TextStyle(color: Colors.black),
                   ),
                 ],
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  // Nút tua lại 10 giây
                   IconButton(
-                    icon: const Icon(Icons.replay_10, color: Colors.black),
+                    icon: const Icon(Icons.replay_10, color: Colors.blue),
                     onPressed: () => audioProvider.seek(-10),
                   ),
+                  // Nút play/pause
                   ElevatedButton(
                     onPressed: audioProvider.togglePlayPause,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black, // Nền nút play/pause màu đen
+                      backgroundColor: Colors.blue,
                       shape: const CircleBorder(),
                       padding: const EdgeInsets.all(14),
                     ),
                     child: Icon(
                       audioProvider.isPlaying ? Icons.pause : Icons.play_arrow,
                       size: 30,
-                      color: Colors.white, // Icon trắng
+                      color: Colors.white,
                     ),
                   ),
+                  // Nút tua tới 10 giây
                   IconButton(
-                    icon: const Icon(Icons.forward_10, color: Colors.black),
+                    icon: const Icon(Icons.forward_10, color: Colors.blue),
                     onPressed: () => audioProvider.seek(10),
                   ),
                 ],
@@ -106,6 +124,7 @@ class AudioWidget extends StatelessWidget {
     );
   }
 
+  /// Định dạng thời lượng thành chuỗi "mm:ss"
   String _formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, '0');
     return "${twoDigits(duration.inMinutes)}:${twoDigits(duration.inSeconds.remainder(60))}";

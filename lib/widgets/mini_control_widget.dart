@@ -1,109 +1,92 @@
-import 'package:app/providers/audio_provider.dart';
-import 'package:app/providers/details_manager.dart';
-import 'package:app/providers/video_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../providers/audio_provider.dart';
+import '../providers/video_provider.dart';
 
 class MiniControl extends StatelessWidget {
+  const MiniControl({Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
-    final detailsManager = Provider.of<DetailsManager>(context);
+    final audioProvider = Provider.of<AudioProvider>(context);
+    final videoProvider = Provider.of<VideoProvider>(context);
 
-    if (detailsManager.currentType == null) {
-      return SizedBox.shrink(); // Không hiển thị nếu không có trạng thái
+    final bool isAudioPlaying = audioProvider.isPlaying;
+    final bool isVideoPlaying = videoProvider.isPlaying;
+    final bool isAudioInitialized = audioProvider.audioUrl.isNotEmpty;
+    final bool isVideoInitialized = videoProvider.controller != null;
+
+    // If no media is initialized, return an empty widget
+    if (!isAudioInitialized && !isVideoInitialized) {
+      return const SizedBox.shrink();
     }
 
-    final type = detailsManager.currentType!;
-    final data = detailsManager.currentData!;
-    final String? audioUrl = data['audioUrl'];
-    final String? videoUrl = data['videoUrl'];
+    // Determine media title
+    final String title = isAudioInitialized
+        ? "Audio: ${audioProvider.sourceType ?? ''} ${audioProvider.sourceId ?? ''}"
+        : "Video: ${videoProvider.sourceType ?? ''} ${videoProvider.sourceId ?? ''}";
 
     return Positioned(
-      bottom: 20,
-      left: 20,
-      right: 20,
+      bottom: 80,
+      left: 16,
+      right: 16,
       child: Container(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(12.0),
         decoration: BoxDecoration(
           color: Colors.blue.shade600,
           borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
-        child: Column(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // Audio/Video Controls
-            if (detailsManager.hasAudio) _buildAudioControls(context, audioUrl!),
-            if (detailsManager.hasVideo) _buildVideoControls(context, videoUrl!),
-
-            const SizedBox(height: 8),
-
-            // Back to Details Button
-            GestureDetector(
-              onTap: () {
-                if (type == 'artifact') {
-                  Navigator.pushNamed(context, '/artifact'); // Điều hướng Artifact
-                } else if (type == 'story') {
-                  Navigator.pushNamed(context, '/story'); // Điều hướng Story
+            // Media Title
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            // Play/Pause Button
+            IconButton(
+              onPressed: () {
+                if (isAudioInitialized) {
+                  audioProvider.togglePlayPause();
+                } else if (isVideoInitialized) {
+                  videoProvider.togglePlayPause();
                 }
               },
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Text(
-                    'Back to Details',
-                    style: TextStyle(color: Colors.white, fontSize: 16),
-                  ),
-                  SizedBox(width: 8),
-                  Icon(Icons.arrow_forward, color: Colors.white),
-                ],
+              icon: Icon(
+                (isAudioPlaying || isVideoPlaying) ? Icons.pause : Icons.play_arrow,
+                color: Colors.white,
               ),
+            ),
+            // Close Button
+            IconButton(
+              onPressed: () {
+                if (isAudioInitialized) {
+                  audioProvider.disposeAudio();
+                }
+                if (isVideoInitialized) {
+                  videoProvider.disposeVideo();
+                }
+              },
+              icon: const Icon(Icons.close, color: Colors.white),
             ),
           ],
         ),
       ),
-    );
-  }
-
-  /// Audio Controls (Pause/Play)
-  Widget _buildAudioControls(BuildContext context, String audioUrl) {
-    final audioProvider = Provider.of<AudioProvider>(context);
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        IconButton(
-          onPressed: audioProvider.togglePlayPause,
-          icon: Icon(
-            audioProvider.isPlaying ? Icons.pause : Icons.play_arrow,
-            color: Colors.white,
-          ),
-        ),
-        const Text(
-          'Audio Playing',
-          style: TextStyle(color: Colors.white),
-        ),
-      ],
-    );
-  }
-
-  /// Video Controls (Pause/Play)
-  Widget _buildVideoControls(BuildContext context, String videoUrl) {
-    final videoProvider = Provider.of<VideoProvider>(context);
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        IconButton(
-          onPressed: videoProvider.togglePlayPause,
-          icon: Icon(
-            videoProvider.isPlaying ? Icons.pause : Icons.play_arrow,
-            color: Colors.white,
-          ),
-        ),
-        const Text(
-          'Video Playing',
-          style: TextStyle(color: Colors.white),
-        ),
-      ],
     );
   }
 }

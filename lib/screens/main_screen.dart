@@ -1,11 +1,11 @@
+import 'package:app/screens/home_screen.dart';
+import 'package:app/screens/map_screen.dart';
+import 'package:app/screens/qr_scanner_screen.dart';
+import 'package:app/screens/story_screen.dart';
+import 'package:app/widgets/bottom_navbar_widget.dart';
 import 'package:app/widgets/mini_control_widget.dart';
+import 'package:app/widgets/right_sheet.dart';
 import 'package:flutter/material.dart';
-import '../widgets/right_sheet.dart';
-import '../widgets/bottom_navbar_widget.dart';
-import '../screens/home_screen.dart';
-import '../screens/story_screen.dart';
-import '../screens/qr_scanner_screen.dart';
-import '../screens/map_screen.dart';
 
 class MainScreen extends StatefulWidget {
   @override
@@ -59,12 +59,12 @@ class _MainScreenState extends State<MainScreen> {
           // Hiển thị màn hình hiện tại
           _screens[_selectedIndex],
 
-          // Mini Control được hiển thị ở trên thanh Bottom Navigation Bar
+          // MiniControl được đặt phía trên Bottom Nav Bar
           Positioned(
-            bottom: 80, // Cách trên Bottom Nav Bar một khoảng
+            bottom: 70, // Khoảng cách từ Bottom Nav Bar
             left: 16,
             right: 16,
-            child: MiniControl(), // Hiển thị Mini Control
+            child: MiniControl(),
           ),
 
           // Thanh điều hướng dưới cùng

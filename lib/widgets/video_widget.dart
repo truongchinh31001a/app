@@ -6,8 +6,15 @@ import '../providers/video_provider.dart';
 
 class VideoWidget extends StatelessWidget {
   final String videoUrl;
+  final int sourceId; // ID của nguồn video
+  final String sourceType; // Loại nguồn: 'artifact' hoặc 'story'
 
-  const VideoWidget({Key? key, required this.videoUrl}) : super(key: key);
+  const VideoWidget({
+    Key? key,
+    required this.videoUrl,
+    required this.sourceId,
+    required this.sourceType,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -15,8 +22,13 @@ class VideoWidget extends StatelessWidget {
 
     // Khởi tạo video nếu cần
     if (videoProvider.controller == null ||
-        videoProvider.controller!.dataSource != videoUrl) {
-      Future.microtask(() => videoProvider.initVideo(videoUrl));
+        videoProvider.controller!.dataSource != videoUrl ||
+        videoProvider.sourceId != sourceId) {
+      Future.microtask(() => videoProvider.initVideo(
+            url: videoUrl,
+            id: sourceId,
+            type: sourceType,
+          ));
     }
 
     return GestureDetector(
@@ -47,7 +59,7 @@ class VideoWidget extends StatelessWidget {
   /// Xây dựng các điều khiển của video
   Widget _buildControls(VideoProvider videoProvider, BuildContext context) {
     return Container(
-      height: 60, // Giới hạn chiều cao thanh điều khiển
+      height: 60,
       color: Colors.black.withOpacity(0.6),
       padding: const EdgeInsets.symmetric(horizontal: 10),
       child: Row(
@@ -109,14 +121,7 @@ class VideoWidget extends StatelessWidget {
           [DeviceOrientation.portraitUp]);
       await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
-      // Đảm bảo video được làm mới lại khi trở về chế độ portrait
       videoProvider.exitFullScreen();
-
-      Future.microtask(() {
-        videoProvider.controller?.setVolume(1.0);
-        videoProvider.controller?.pause(); // Đảm bảo dừng video (nếu cần)
-        videoProvider.notifyListeners(); // Cập nhật lại giao diện
-      });
     });
   }
 }

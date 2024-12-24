@@ -11,27 +11,40 @@ class VideoProvider with ChangeNotifier {
   Timer? _hideControlsTimer;
   final SharedState sharedState = SharedState();
 
+  int? _sourceId; // ID của nguồn phát (kiểu int)
+  String? _sourceType; // Loại nguồn phát (e.g., "artifact", "story")
+
   VideoProvider() {
     sharedState.activeMediaNotifier.addListener(_handleActiveMediaChange);
   }
 
   // Getters
   VideoPlayerController? get controller => _controller;
+  int? get sourceId => _sourceId; // Getter cho ID (kiểu int)
+  String? get sourceType => _sourceType; // Getter cho Type
   bool get isPlaying => _controller?.value.isPlaying ?? false;
   bool get isLoading => _isLoading;
   bool get showControls => _showControls;
 
-  /// Khởi tạo video
-  Future<void> initVideo(String url) async {
-    if (_controller != null && _controller!.dataSource == url)
-      return; // Tránh khởi tạo lại cùng một URL
+  /// Khởi tạo video mới
+  Future<void> initVideo({
+    required String url,
+    required int id, // ID nguồn phát (int)
+    required String type, // Loại nguồn phát
+  }) async {
+    if (_controller != null && _controller!.dataSource == url && _sourceId == id) {
+      return; // Tránh khởi tạo lại cùng một URL và ID
+    }
 
+    disposeVideo(); // Dọn dẹp controller cũ trước khi khởi tạo mới
+
+    _resetState();
+
+    _sourceId = id; // Lưu ID nguồn
+    _sourceType = type; // Lưu loại nguồn
     _isLoading = true;
     notifyListeners();
 
-    // Dọn sạch controller cũ nếu có
-    _hideControlsTimer?.cancel();
-    _controller?.dispose();
     _controller = VideoPlayerController.network(url);
 
     try {
@@ -41,7 +54,6 @@ class VideoProvider with ChangeNotifier {
 
       // Lắng nghe các thay đổi trạng thái của video
       _controller!.addListener(() {
-        // Chỉ thông báo nếu controller được khởi tạo
         if (_controller?.value.isInitialized == true) {
           notifyListeners();
         }
@@ -81,7 +93,6 @@ class VideoProvider with ChangeNotifier {
       _showControls = !_showControls;
     }
 
-    // Nếu controls hiển thị, đặt lại bộ đếm
     if (_showControls) {
       _startHideControlsTimer();
     }
@@ -89,9 +100,10 @@ class VideoProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// Lắng nghe trạng thái media từ `SharedState`
   void _handleActiveMediaChange() {
     if (sharedState.activeMedia != 'video' && isPlaying) {
-      _controller?.pause(); // Tự động dừng nếu media khác (audio) đang phát
+      _controller?.pause();
       notifyListeners();
     }
   }
@@ -141,12 +153,30 @@ class VideoProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// Reset trạng thái
+  void _resetState() {
+    _sourceId = null;
+    _sourceType = null;
+    _isLoading = false;
+    _showControls = true;
+    _hideControlsTimer?.cancel();
+    _controller?.dispose();
+    _controller = null;
+  }
+
   /// Dọn dẹp tài nguyên
   void disposeVideo() {
+    sharedState.setActiveMedia(null); // Xóa trạng thái active media
     sharedState.activeMediaNotifier.removeListener(_handleActiveMediaChange);
     _hideControlsTimer?.cancel();
     _controller?.removeListener(() {}); // Xóa tất cả listener
     _controller?.dispose();
     _controller = null;
+  }
+
+  @override
+  void dispose() {
+    disposeVideo(); // Dọn dẹp toàn bộ tài nguyên khi dispose provider
+    super.dispose();
   }
 }

@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 
 class AudioProvider with ChangeNotifier {
-  final AudioPlayer _audioPlayer = AudioPlayer();
   final SharedState sharedState = SharedState();
 
+  AudioPlayer? _audioPlayer;
   bool _isPlaying = false;
   bool _isLoading = false;
   bool _isNearCompletion = false;
@@ -15,10 +15,14 @@ class AudioProvider with ChangeNotifier {
   Duration _totalDuration = Duration.zero;
 
   String _audioUrl = '';
+  int? _sourceId; // ID nguồn phát
+  String? _sourceType; // Loại nguồn phát
   Timer? _completionTimer;
 
   // Getters
   String get audioUrl => _audioUrl;
+  int? get sourceId => _sourceId;
+  String? get sourceType => _sourceType;
   bool get isPlaying => _isPlaying;
   bool get isLoading => _isLoading;
   Duration get currentPosition => _currentPosition;
@@ -29,49 +33,53 @@ class AudioProvider with ChangeNotifier {
   }
 
   /// Khởi tạo audio mới
-  Future<void> initAudio(String url) async {
-    if (_audioUrl == url)
-      return; // Nếu audio URL không thay đổi, không cần khởi tạo lại
+  Future<void> initAudio({
+    required String url,
+    required int id,
+    required String type,
+  }) async {
+    if (_audioUrl == url) return; // Nếu URL không thay đổi, không cần khởi tạo lại
+
+    disposeAudio(); // Hủy tài nguyên cũ trước khi khởi tạo mới
 
     _resetState();
-    sharedState.setActiveMedia('audio'); // Đặt trạng thái là audio khi khởi tạo
+    _audioPlayer = AudioPlayer();
+    sharedState.setActiveMedia('audio');
     _audioUrl = url;
+    _sourceId = id;
+    _sourceType = type;
     _isLoading = true;
     notifyListeners();
 
     try {
-      await _audioPlayer.setSourceUrl(url).timeout(
+      await _audioPlayer!.setSourceUrl(url).timeout(
             const Duration(seconds: 20),
-            onTimeout: () =>
-                throw TimeoutException("Kết nối quá lâu, vui lòng thử lại!"),
+            onTimeout: () => throw TimeoutException("Kết nối quá lâu."),
           );
 
       _setupListeners();
       _isLoading = false;
       _totalDuration = await _fetchDuration();
-      _play();
+      await _play();
     } catch (e) {
       _isLoading = false;
-      print("Error initializing audio: $e");
+      debugPrint("Error initializing audio: $e");
     }
     notifyListeners();
   }
 
-  /// Thiết lập các sự kiện lắng nghe cho AudioPlayer
+  /// Thiết lập sự kiện lắng nghe
   void _setupListeners() {
-    _audioPlayer.onDurationChanged.listen((duration) {
+    _audioPlayer?.onDurationChanged.listen((duration) {
       if (duration > Duration.zero) {
         _totalDuration = duration;
         notifyListeners();
       }
     });
 
-    _audioPlayer.onPositionChanged.listen((position) {
+    _audioPlayer?.onPositionChanged.listen((position) {
       _currentPosition = position;
-
-      // Gần kết thúc: còn 0.5 giây
-      if (_totalDuration - _currentPosition <=
-              const Duration(milliseconds: 500) &&
+      if (_totalDuration - _currentPosition <= const Duration(milliseconds: 500) &&
           !_isNearCompletion) {
         _isNearCompletion = true;
         _prepareForReplay();
@@ -79,76 +87,106 @@ class AudioProvider with ChangeNotifier {
       notifyListeners();
     });
 
-    _audioPlayer.onPlayerComplete.listen((_) {
+    _audioPlayer?.onPlayerComplete.listen((_) {
       _isPlaying = false;
-      sharedState.setActiveMedia(null); // Clear trạng thái khi audio hoàn thành
+      sharedState.setActiveMedia(null);
       notifyListeners();
     });
   }
 
   /// Đưa về trạng thái ban đầu trước khi kết thúc
   Future<void> _prepareForReplay() async {
-    await _audioPlayer.seek(Duration.zero);
+    if (_audioPlayer == null) return;
+    await _audioPlayer!.seek(Duration.zero);
     await _pause();
     _isPlaying = false;
     notifyListeners();
-    print("Audio prepared for replay.");
+    debugPrint("Audio prepared for replay.");
   }
 
-  /// Lấy thời lượng âm thanh an toàn
+  /// Lấy thời lượng âm thanh
   Future<Duration> _fetchDuration() async {
     try {
-      final duration = await _audioPlayer.getDuration();
+      final duration = await _audioPlayer?.getDuration();
       return duration ?? const Duration(minutes: 3);
-    } catch (_) {
+    } catch (e) {
+      debugPrint("Error fetching duration: $e");
       return const Duration(minutes: 3);
     }
   }
 
   /// Phát và tạm dừng âm thanh
   void togglePlayPause() {
+    if (_audioPlayer == null) return;
+
     if (_isPlaying) {
       _pause();
-      sharedState.setActiveMedia(null); // Clear trạng thái khi tạm dừng
+      sharedState.setActiveMedia(null);
     } else {
-      sharedState.setActiveMedia('audio'); // Đặt trạng thái là audio
+      sharedState.setActiveMedia('audio');
       _play();
     }
   }
 
   /// Phát âm thanh
   Future<void> _play() async {
-    await _audioPlayer.resume();
-    _isPlaying = true;
-    notifyListeners();
+    if (_audioPlayer == null) return;
+    try {
+      await _audioPlayer!.resume();
+      _isPlaying = true;
+      notifyListeners();
+    } catch (e) {
+      debugPrint("Error playing audio: $e");
+    }
   }
 
   /// Tạm dừng âm thanh
   Future<void> _pause() async {
-    await _audioPlayer.pause();
-    _isPlaying = false;
-    notifyListeners();
+    if (_audioPlayer == null) return;
+    try {
+      await _audioPlayer!.pause();
+      _isPlaying = false;
+      notifyListeners();
+    } catch (e) {
+      debugPrint("Error pausing audio: $e");
+    }
   }
 
   /// Lắng nghe thay đổi trạng thái từ SharedState
   Future<void> _handleActiveMediaChange() async {
     if (sharedState.activeMedia != 'audio' && _isPlaying) {
-      _pause(); // Tự động dừng nếu media khác (video) đang phát
+      _pause();
     }
   }
 
-  /// Seek đến một vị trí mới
+  /// Seek đến vị trí mới
   Future<void> seek(int seconds) async {
+    if (_audioPlayer == null) return;
     final newPosition = _currentPosition + Duration(seconds: seconds);
     if (newPosition >= Duration.zero && newPosition <= _totalDuration) {
-      await _audioPlayer.seek(newPosition);
-      notifyListeners();
+      try {
+        await _audioPlayer?.seek(newPosition);
+        notifyListeners();
+      } catch (e) {
+        debugPrint("Error seeking audio: $e");
+      }
     }
   }
 
-  /// Reset trạng thái của AudioProvider
+  /// Hủy AudioPlayer và các tài nguyên liên quan
+  void disposeAudio() {
+    sharedState.activeMediaNotifier.removeListener(_handleActiveMediaChange);
+    _audioPlayer?.dispose();
+    _completionTimer?.cancel();
+    _resetState();
+    _audioPlayer = null;
+  }
+
+  /// Reset trạng thái
   void _resetState() {
     _audioUrl = '';
+    _sourceId = null;
+    _sourceType = null;
     _isPlaying = false;
     _isLoading = false;
     _currentPosition = Duration.zero;
@@ -159,9 +197,7 @@ class AudioProvider with ChangeNotifier {
   /// Dọn dẹp tài nguyên
   @override
   void dispose() {
-    sharedState.activeMediaNotifier.removeListener(_handleActiveMediaChange);
-    _audioPlayer.dispose();
-    _completionTimer?.cancel();
+    disposeAudio();
     super.dispose();
   }
 }

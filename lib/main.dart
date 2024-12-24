@@ -1,4 +1,5 @@
-import 'package:app/providers/details_manager.dart';
+
+import 'package:app/providers/mini_control_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -38,7 +39,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => ArtifactProvider()),
         ChangeNotifierProvider(create: (_) => AudioProvider()),
         ChangeNotifierProvider(create: (_) => VideoProvider()),
-        ChangeNotifierProvider(create: (_) => DetailsManager()),
+        ChangeNotifierProvider(create: (_) => MiniControlProvider())
       ],
       child: MuseumApp(),
     ),
@@ -60,6 +61,7 @@ class MuseumApp extends StatelessWidget {
         '/': (context) => SplashScreen(),
         '/main': (context) => MainScreen(),
         '/lock': (context) => LockScreen(),
+        
       },
     );
   }
