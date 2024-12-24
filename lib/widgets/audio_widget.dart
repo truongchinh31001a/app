@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/audio_provider.dart';
+import '../providers/mini_control_provider.dart';
 
 class AudioWidget extends StatelessWidget {
   final String audioUrl;
@@ -17,6 +18,7 @@ class AudioWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final audioProvider = Provider.of<AudioProvider>(context);
+    final miniControlProvider = Provider.of<MiniControlProvider>(context, listen: false);
 
     if (audioProvider.audioUrl != audioUrl || audioProvider.sourceId != id) {
       // Khởi tạo audio với id và type nếu URL hoặc ID không khớp
@@ -98,7 +100,12 @@ class AudioWidget extends StatelessWidget {
                   ),
                   // Nút play/pause
                   ElevatedButton(
-                    onPressed: audioProvider.togglePlayPause,
+                    onPressed: () {
+                      audioProvider.togglePlayPause();
+                      if (audioProvider.isPlaying) {
+                        miniControlProvider.show(); // Hiển thị MiniControl
+                      }
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue,
                       shape: const CircleBorder(),

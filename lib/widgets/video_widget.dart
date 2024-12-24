@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 import '../providers/video_provider.dart';
+import '../providers/mini_control_provider.dart';
 
 class VideoWidget extends StatelessWidget {
   final String videoUrl;
@@ -19,6 +20,7 @@ class VideoWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final videoProvider = Provider.of<VideoProvider>(context, listen: false);
+    final miniControlProvider = Provider.of<MiniControlProvider>(context, listen: false);
 
     // Khởi tạo video nếu cần
     if (videoProvider.controller == null ||
@@ -47,7 +49,7 @@ class VideoWidget extends StatelessWidget {
               alignment: Alignment.bottomCenter,
               children: [
                 VideoPlayer(provider.controller!),
-                if (provider.showControls) _buildControls(provider, context),
+                if (provider.showControls) _buildControls(provider, context, miniControlProvider),
               ],
             ),
           );
@@ -57,7 +59,8 @@ class VideoWidget extends StatelessWidget {
   }
 
   /// Xây dựng các điều khiển của video
-  Widget _buildControls(VideoProvider videoProvider, BuildContext context) {
+  Widget _buildControls(
+      VideoProvider videoProvider, BuildContext context, MiniControlProvider miniControlProvider) {
     return Container(
       height: 60,
       color: Colors.black.withOpacity(0.6),
@@ -70,7 +73,12 @@ class VideoWidget extends StatelessWidget {
               videoProvider.isPlaying ? Icons.pause : Icons.play_arrow,
               color: Colors.white,
             ),
-            onPressed: videoProvider.togglePlayPause,
+            onPressed: () {
+              videoProvider.togglePlayPause();
+              if (videoProvider.isPlaying) {
+                miniControlProvider.show(); // Hiển thị MiniControl khi video bắt đầu phát
+              }
+            },
           ),
 
           // Thanh Slider tiến trình video

@@ -32,7 +32,9 @@ class VideoProvider with ChangeNotifier {
     required int id, // ID nguồn phát (int)
     required String type, // Loại nguồn phát
   }) async {
-    if (_controller != null && _controller!.dataSource == url && _sourceId == id) {
+    if (_controller != null &&
+        _controller!.dataSource == url &&
+        _sourceId == id) {
       return; // Tránh khởi tạo lại cùng một URL và ID
     }
 
@@ -58,6 +60,10 @@ class VideoProvider with ChangeNotifier {
           notifyListeners();
         }
       });
+
+      // Tự động phát video sau khi khởi tạo thành công
+      await _controller!.play();
+      sharedState.setActiveMedia('video'); // Đặt trạng thái là 'video'
 
       // Bắt đầu đếm ngược ẩn controls
       _startHideControlsTimer();

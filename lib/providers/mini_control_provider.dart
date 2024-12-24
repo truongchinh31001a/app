@@ -5,13 +5,13 @@ class MiniControlProvider with ChangeNotifier {
 
   bool get isVisible => _isVisible;
 
-  void hide() {
-    _isVisible = false;
+  void show() {
+    _isVisible = true;
     notifyListeners();
   }
 
-  void show() {
-    _isVisible = true;
+  void hide() {
+    _isVisible = false;
     notifyListeners();
   }
 }
