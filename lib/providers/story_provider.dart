@@ -18,11 +18,9 @@ class StoryProvider extends ChangeNotifier {
 
   /// Tìm Story theo `id`
   Story? getStoryById(int id) {
-    try {
-      return _stories.firstWhere((story) => story.storyId == id);
-    } catch (_) {
-      return null; // Trả về `null` nếu không tìm thấy
-    }
+    return _stories.firstWhere(
+      (story) => story.storyId == id,
+    );
   }
 
   /// Lấy danh sách câu chuyện theo khu vực (`areaId`)

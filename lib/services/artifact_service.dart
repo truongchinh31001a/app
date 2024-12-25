@@ -12,15 +12,11 @@ class ArtifactService {
 
     if (response.statusCode == 200) {
       try {
-        // Giải mã nội dung phản hồi với utf8
         final decodedBody = utf8.decode(response.bodyBytes);
-
-        // Trường hợp chuỗi JSON bị lồng vào dạng String
         final jsonData = decodedBody.startsWith('{')
-            ? json.decode(decodedBody) // JSON hợp lệ
-            : json.decode(json.decode(decodedBody)); // JSON lồng String
+            ? json.decode(decodedBody)
+            : json.decode(json.decode(decodedBody));
 
-        // Kiểm tra dữ liệu có đúng dạng Map không
         if (jsonData is Map<String, dynamic>) {
           return Artifact.fromJson(jsonData);
         } else {
@@ -43,7 +39,6 @@ class ArtifactService {
       final response = await http.get(url);
 
       if (response.statusCode == 200) {
-        // Giải mã nội dung phản hồi với utf8
         final decodedBody = utf8.decode(response.bodyBytes);
         final data = json.decode(decodedBody);
         return data as List<dynamic>;
@@ -57,6 +52,7 @@ class ArtifactService {
     }
   }
 
+  /// Lấy Artifact theo ID
   Future<Map<String, dynamic>> fetchArtifactById(int artifactId) async {
     final url = Uri.parse('$baseUrl/history/artifact/$artifactId');
 
@@ -64,7 +60,6 @@ class ArtifactService {
       final response = await http.get(url);
 
       if (response.statusCode == 200) {
-        // Giải mã nội dung phản hồi với utf8
         final decodedBody = utf8.decode(response.bodyBytes);
         final data = json.decode(decodedBody);
 
@@ -81,6 +76,33 @@ class ArtifactService {
     } catch (e) {
       print('Error fetching artifact: $e');
       throw Exception('Error fetching artifact: $e');
+    }
+  }
+
+  /// Lấy toàn bộ danh sách Artifacts
+  Future<List<Artifact>> fetchAllArtifacts() async {
+    final url = Uri.parse('$baseUrl/allartifact'); // URL API để lấy toàn bộ artifacts
+
+    try {
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final decodedBody = utf8.decode(response.bodyBytes);
+        final data = json.decode(decodedBody);
+
+        if (data is List) {
+          return data.map((item) => Artifact.fromJson(item)).toList();
+        } else {
+          throw Exception(
+              'Unexpected response format: Expected a List but got ${data.runtimeType}');
+        }
+      } else {
+        throw Exception(
+            'Failed to fetch all artifacts. Status: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching all artifacts: $e');
+      throw Exception('Error fetching all artifacts: $e');
     }
   }
 }

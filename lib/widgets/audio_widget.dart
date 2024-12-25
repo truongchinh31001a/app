@@ -22,12 +22,22 @@ class AudioWidget extends StatelessWidget {
 
     if (audioProvider.audioUrl != audioUrl || audioProvider.sourceId != id) {
       // Khởi tạo audio với id và type nếu URL hoặc ID không khớp
-      Future.microtask(() {
-        audioProvider.initAudio(
+      Future.microtask(() async {
+        await audioProvider.initAudio(
           url: audioUrl,
           id: id,
           type: type,
         );
+
+        // Tự động phát audio sau khi khởi tạo
+        if (!audioProvider.isPlaying) {
+          audioProvider.togglePlayPause();
+        }
+
+        // Hiển thị MiniControl ngay sau khi phát
+        if (audioProvider.isPlaying) {
+          miniControlProvider.show();
+        }
       });
     }
 

@@ -1,3 +1,4 @@
+import 'package:app/providers/artifact_provider.dart';
 import 'package:app/providers/audio_provider.dart';
 import 'package:app/providers/mini_control_provider.dart';
 import 'package:app/providers/story_provider.dart';
@@ -21,12 +22,19 @@ class _MiniControlState extends State<MiniControl> {
     final audioProvider = Provider.of<AudioProvider>(context);
     final videoProvider = Provider.of<VideoProvider>(context);
     final storyProvider = Provider.of<StoryProvider>(context, listen: false);
+    final artifactProvider = Provider.of<ArtifactProvider>(context, listen: false);
+
+    // Kiểm tra trạng thái tải Artifact
+    if (artifactProvider.isLoading) {
+      return const SizedBox.shrink(); // Không hiển thị gì khi đang tải dữ liệu
+    }
 
     final bool isAudioPlaying = audioProvider.isPlaying;
     final bool isVideoPlaying = videoProvider.isPlaying;
     final bool isAudioInitialized = audioProvider.audioUrl.isNotEmpty;
     final bool isVideoInitialized = videoProvider.controller != null;
 
+    // Dọn dẹp media cũ khi media mới bắt đầu
     if (isAudioPlaying && isVideoInitialized) {
       audioProvider.disposeAudio(); // Dừng audio nếu video bắt đầu
     }
@@ -34,13 +42,15 @@ class _MiniControlState extends State<MiniControl> {
       videoProvider.disposeVideo(); // Dừng video nếu audio bắt đầu
     }
 
+    // Nếu không có media nào được khởi tạo hoặc đang phát, ẩn MiniControl
     if ((!isAudioInitialized && !isVideoInitialized) || !miniControlProvider.isVisible) {
       return const SizedBox.shrink();
     }
 
+    // Lấy tiêu đề từ ArtifactProvider hoặc StoryProvider
     final String title = isAudioInitialized
-        ? "Audio: ${audioProvider.sourceType ?? ''} ${audioProvider.sourceId ?? ''}"
-        : "Video: ${videoProvider.sourceType ?? ''} ${videoProvider.sourceId ?? ''}";
+        ? _getTitle(audioProvider.sourceId, audioProvider.sourceType, artifactProvider, storyProvider)
+        : _getTitle(videoProvider.sourceId, videoProvider.sourceType, artifactProvider, storyProvider);
 
     return Positioned(
       bottom: 80,
@@ -100,9 +110,7 @@ class _MiniControlState extends State<MiniControl> {
                   }
                 },
                 icon: Icon(
-                  isAudioPlaying || isVideoPlaying
-                      ? Icons.pause
-                      : Icons.play_arrow,
+                  isAudioPlaying || isVideoPlaying ? Icons.pause : Icons.play_arrow,
                   color: Colors.white,
                 ),
               ),
@@ -123,6 +131,28 @@ class _MiniControlState extends State<MiniControl> {
         ),
       ),
     );
+  }
+
+  /// Lấy tiêu đề từ ArtifactProvider hoặc StoryProvider
+  String _getTitle(
+    int? id,
+    String? type,
+    ArtifactProvider artifactProvider,
+    StoryProvider storyProvider,
+  ) {
+    if (id == null || type == null) return 'Unknown';
+
+    if (type == 'artifact') {
+      final artifact = artifactProvider.getArtifactById(id);
+      debugPrint('Fetching Title for Artifact ID: $id, Found: ${artifact?.name}');
+      return artifact?.name ?? 'Unknown Artifact';
+    } else if (type == 'story') {
+      final story = storyProvider.getStoryById(id);
+      debugPrint('Fetching Title for Story ID: $id, Found: ${story?.name}');
+      return story?.name ?? 'Unknown Story';
+    }
+
+    return 'Unknown';
   }
 
   void _navigateToDetail(

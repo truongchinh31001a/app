@@ -26,11 +26,21 @@ class VideoWidget extends StatelessWidget {
     if (videoProvider.controller == null ||
         videoProvider.controller!.dataSource != videoUrl ||
         videoProvider.sourceId != sourceId) {
-      Future.microtask(() => videoProvider.initVideo(
-            url: videoUrl,
-            id: sourceId,
-            type: sourceType,
-          ));
+      Future.microtask(() async {
+        await videoProvider.initVideo(
+          url: videoUrl,
+          id: sourceId,
+          type: sourceType,
+        );
+
+        // Tự động phát video sau khi khởi tạo
+        if (!videoProvider.isPlaying) {
+          videoProvider.controller!.play();
+        }
+
+        // Hiển thị MiniControl ngay khi phát
+        miniControlProvider.show();
+      });
     }
 
     return GestureDetector(
@@ -49,7 +59,8 @@ class VideoWidget extends StatelessWidget {
               alignment: Alignment.bottomCenter,
               children: [
                 VideoPlayer(provider.controller!),
-                if (provider.showControls) _buildControls(provider, context, miniControlProvider),
+                if (provider.showControls)
+                  _buildControls(provider, context, miniControlProvider),
               ],
             ),
           );
@@ -76,7 +87,7 @@ class VideoWidget extends StatelessWidget {
             onPressed: () {
               videoProvider.togglePlayPause();
               if (videoProvider.isPlaying) {
-                miniControlProvider.show(); // Hiển thị MiniControl khi video bắt đầu phát
+                miniControlProvider.show();
               }
             },
           ),
@@ -88,8 +99,7 @@ class VideoWidget extends StatelessWidget {
                   .clamp(0, videoProvider.controller!.value.duration.inSeconds)
                   .toDouble(),
               min: 0,
-              max:
-                  videoProvider.controller!.value.duration.inSeconds.toDouble(),
+              max: videoProvider.controller!.value.duration.inSeconds.toDouble(),
               activeColor: Colors.white,
               inactiveColor: Colors.grey,
               onChanged: (value) {
