@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import '../models/artifact.dart';
 
 class ArtifactService {
-  final String baseUrl = 'http://192.168.1.86:3000/api/app';
+  final String baseUrl = 'http://192.168.1.4:3000/api/app';
 
   /// Lấy Artifact theo QR Code
   Future<Artifact?> fetchArtifactByQRCode(String qrCode) async {
@@ -81,7 +81,8 @@ class ArtifactService {
 
   /// Lấy toàn bộ danh sách Artifacts
   Future<List<Artifact>> fetchAllArtifacts() async {
-    final url = Uri.parse('$baseUrl/allartifact'); // URL API để lấy toàn bộ artifacts
+    final url =
+        Uri.parse('$baseUrl/allartifact'); // URL API để lấy toàn bộ artifacts
 
     try {
       final response = await http.get(url);

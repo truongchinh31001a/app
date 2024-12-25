@@ -3,15 +3,45 @@ import 'package:app/widgets/audio_widget.dart';
 import 'package:app/widgets/video_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
 import '../providers/artifact_provider.dart';
 import '../providers/security_provider.dart';
 
-class ArtifactDetailScreen extends StatelessWidget {
-  
+class ArtifactDetailScreen extends StatefulWidget {
   const ArtifactDetailScreen({Key? key}) : super(key: key);
 
-  /// Ánh xạ `language` từ SecurityProvider sang mã ngôn ngữ
+  @override
+  State<ArtifactDetailScreen> createState() => _ArtifactDetailScreenState();
+}
+
+class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadArtifact();
+  }
+
+  Future<void> _loadArtifact() async {
+    final artifactProvider =
+        Provider.of<ArtifactProvider>(context, listen: false);
+    final qrCode = artifactProvider.currentQrCode;
+
+    if (qrCode != null) {
+      try {
+        await artifactProvider.fetchArtifactByQRCode(qrCode);
+      } catch (e) {
+        debugPrint('Error loading artifact: $e');
+      } finally {
+        if (mounted) {
+          setState(() => isLoading = false);
+        }
+      }
+    } else {
+      setState(() => isLoading = false);
+    }
+  }
+
   String _mapLanguage(String? language) {
     switch (language) {
       case 'English':
@@ -27,13 +57,12 @@ class ArtifactDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final artifactProvider = Provider.of<ArtifactProvider>(context);
     final securityProvider = Provider.of<SecurityProvider>(context);
-    final artifactLogService = ArtifactLogService(); // Service logging
+    final artifactLogService = ArtifactLogService();
 
     final artifact = artifactProvider.currentArtifact;
-    final language = _mapLanguage(securityProvider.language);
 
     // Loading State
-    if (artifactProvider.isLoading) {
+    if (isLoading) {
       return const Scaffold(
         body: Center(
           child: CircularProgressIndicator(),
@@ -41,21 +70,17 @@ class ArtifactDetailScreen extends StatelessWidget {
       );
     }
 
-    // Error State
-    if (artifactProvider.errorMessage != null) {
+    // Error State: Không tìm thấy Artifact
+    if (artifact == null) {
       return Scaffold(
-        appBar: _buildAppBar(context, "Chi tiết Artifact"),
-        body: Center(child: Text(artifactProvider.errorMessage!)),
+        appBar: _buildAppBar(context, "Artifact Not Found"),
+        body: const Center(
+          child: Text("No Artifact available for the given QR Code."),
+        ),
       );
     }
 
-    // No Artifact State
-    if (artifact == null) {
-      return Scaffold(
-        appBar: _buildAppBar(context, "Chi tiết Artifact"),
-        body: const Center(child: Text("Không có dữ liệu Artifact.")),
-      );
-    }
+    final language = _mapLanguage(securityProvider.language);
 
     // Gọi API log scan
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -76,7 +101,7 @@ class ArtifactDetailScreen extends StatelessWidget {
     final String audioUrl = artifact.audioUrl[language] ?? '';
     final String videoUrl = artifact.videoUrl[language] ?? '';
     final String description =
-        artifact.description[language] ?? 'Không có mô tả';
+        artifact.description[language] ?? 'No description available.';
     final String imageUrl = artifact.imageUrl;
 
     return Scaffold(
@@ -89,7 +114,7 @@ class ArtifactDetailScreen extends StatelessWidget {
               // TOP: Video hoặc Hình ảnh
               if (videoUrl.isNotEmpty)
                 VideoWidget(
-                  videoUrl: 'http://192.168.1.86:3000$videoUrl',
+                  videoUrl: 'http://192.168.1.4:3000$videoUrl',
                   sourceId: artifact.artifactId,
                   sourceType: 'artifact',
                 )
@@ -126,7 +151,7 @@ class ArtifactDetailScreen extends StatelessWidget {
                 margin: const EdgeInsets.symmetric(horizontal: 16.0),
                 height: 180,
                 child: AudioWidget(
-                  audioUrl: 'http://192.168.1.86:3000$audioUrl',
+                  audioUrl: 'http://192.168.1.4:3000$audioUrl',
                   id: artifact.artifactId,
                   type: 'artifact',
                 ),
@@ -140,7 +165,7 @@ class ArtifactDetailScreen extends StatelessWidget {
   /// Hiển thị hình ảnh khi không có Video
   Widget _buildTopImage(String imageUrl) {
     return Image.network(
-      'http://192.168.1.86:3000$imageUrl',
+      'http://192.168.1.4:3000$imageUrl',
       fit: BoxFit.cover,
       width: double.infinity,
       height: 200,

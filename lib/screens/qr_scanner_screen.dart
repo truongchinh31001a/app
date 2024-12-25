@@ -46,37 +46,34 @@ class _QRScannerScreenState extends State<QRScannerScreen>
           // Camera QR Scanner
           MobileScanner(
             onDetect: (BarcodeCapture capture) async {
-              if (_isProcessing) {
-                print('[QR Scanner] Ignored detection because processing is already ongoing.');
-                return; // Ngăn quét nếu đang xử lý
-              }
+              if (_isProcessing) return;
 
               final qrCode = capture.barcodes.first.rawValue;
               if (qrCode != null) {
-                setState(() {
-                  _isProcessing = true; // Đặt trạng thái đang xử lý
-                });
+                setState(() => _isProcessing = true);
                 print('[QR Scanner] Detected QR Code: $qrCode');
 
                 try {
-                  // Gọi API hoặc xử lý QR Code
-                  await Provider.of<ArtifactProvider>(context, listen: false)
-                      .fetchArtifactByQRCode(qrCode);
+                  // Lưu QR Code vào ArtifactProvider
+                  final artifactProvider =
+                      Provider.of<ArtifactProvider>(context, listen: false);
+                  artifactProvider.setCurrentQrCode(qrCode);
 
-                  Navigator.push(
+                  // Điều hướng đến ArtifactDetailScreen
+                  await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (_) => const ArtifactDetailScreen(),
                     ),
                   );
                 } catch (e) {
-                  print('[QR Scanner] Error while fetching artifact: $e');
-                  _showErrorSnackBar(context, 'Lỗi khi tải dữ liệu: $e');
+                  print('[QR Scanner] Error: $e');
+                  _showErrorSnackBar(context, 'Lỗi khi quét mã: $e');
                 } finally {
-                  setState(() {
-                    _isProcessing = false; // Reset trạng thái khi xử lý xong
-                  });
-                  print('[QR Scanner] Reset processing state.');
+                  // Reset trạng thái để cho phép quét lần sau
+                  if (mounted) {
+                    setState(() => _isProcessing = false);
+                  }
                 }
               } else {
                 print('[QR Scanner] QR Code is null.');
@@ -84,13 +81,11 @@ class _QRScannerScreenState extends State<QRScannerScreen>
             },
           ),
 
-          // Overlay làm mờ xung quanh vùng quét và khung quét
+          // Overlay làm mờ xung quanh vùng quét
           Positioned.fill(
             child: Stack(
               children: [
-                // Làm mờ bên ngoài khung quét
                 _buildScanOverlay(),
-                // Khung quét với 4 góc màu trắng
                 Center(
                   child: Stack(
                     children: [
@@ -102,7 +97,8 @@ class _QRScannerScreenState extends State<QRScannerScreen>
                             return Align(
                               alignment: Alignment(0, _animation.value * 2 - 1),
                               child: Container(
-                                margin: const EdgeInsets.symmetric(horizontal: 10),
+                                margin:
+                                    const EdgeInsets.symmetric(horizontal: 10),
                                 height: 3,
                                 color: Colors.blueAccent,
                               ),
@@ -154,7 +150,8 @@ class _QRScannerScreenState extends State<QRScannerScreen>
       width: 250,
       height: 250,
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.transparent), // Không hiển thị border tổng thể
+        border: Border.all(
+            color: Colors.transparent), // Không hiển thị border tổng thể
       ),
       child: Stack(
         children: [

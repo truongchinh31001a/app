@@ -6,33 +6,22 @@ class ArtifactProvider with ChangeNotifier {
   final ArtifactService _artifactService = ArtifactService();
 
   Artifact? _currentArtifact;
+  String? _currentQrCode;
   bool _isLoading = false;
   String? _errorMessage;
   final List<Artifact> _artifacts = []; // Danh sách Artifact
 
+  /// Getter
   Artifact? get currentArtifact => _currentArtifact;
+  String? get currentQrCode => _currentQrCode;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
-  List<Artifact> get artifacts => List.unmodifiable(_artifacts); // Đảm bảo chỉ đọc từ ngoài
+  List<Artifact> get artifacts => List.unmodifiable(_artifacts);
 
-  /// Fetch tất cả các Artifact từ API
-  Future<void> fetchAllArtifacts() async {
-    _isLoading = true;
+  /// Lưu QR Code hiện tại
+  void setCurrentQrCode(String qrCode) {
+    _currentQrCode = qrCode;
     notifyListeners();
-
-    try {
-      final fetchedArtifacts = await _artifactService.fetchAllArtifacts(); // Lấy danh sách từ API
-      _artifacts
-        ..clear()
-        ..addAll(fetchedArtifacts); // Cập nhật nội dung danh sách
-      debugPrint('Fetched Artifacts: ${_artifacts.map((artifact) => artifact.artifactId).toList()}');
-    } catch (e) {
-      debugPrint('Error fetching artifacts: $e');
-      _errorMessage = e.toString();
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
   }
 
   /// Đặt Artifact hiện tại
@@ -47,31 +36,28 @@ class ArtifactProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  /// Lấy Artifact từ danh sách theo ID
-  Artifact? getArtifactById(int id) {
-    try {
-      return _artifacts.firstWhere((artifact) => artifact.artifactId == id);
-    } catch (e) {
-      return null; // Trả về null nếu không tìm thấy phần tử
-    }
+  /// Xóa dữ liệu hiện tại
+  void clearCurrentData() {
+    _currentArtifact = null;
+    _currentQrCode = null;
+    notifyListeners();
   }
 
-  /// Fetch Artifact bằng QR Code
-  Future<void> fetchArtifactByQRCode(String qrCode) async {
+  /// Fetch tất cả các Artifact từ API
+  Future<void> fetchAllArtifacts() async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final artifact = await _artifactService.fetchArtifactByQRCode(qrCode);
-      if (artifact != null) {
-        _currentArtifact = artifact;
-        // Nếu Artifact được tải về không có trong danh sách, thêm nó vào
-        if (!_artifacts.any((item) => item.artifactId == artifact.artifactId)) {
-          _artifacts.add(artifact);
-        }
-      }
+      final fetchedArtifacts = await _artifactService.fetchAllArtifacts();
+      _artifacts
+        ..clear()
+        ..addAll(fetchedArtifacts); // Cập nhật nội dung danh sách
+      debugPrint(
+          'Fetched Artifacts: ${_artifacts.map((artifact) => artifact.artifactId).toList()}');
     } catch (e) {
+      debugPrint('Error fetching artifacts: $e');
       _errorMessage = e.toString();
     } finally {
       _isLoading = false;
@@ -79,10 +65,34 @@ class ArtifactProvider with ChangeNotifier {
     }
   }
 
-  /// Clear Artifact hiện tại
-  void clearCurrentArtifact() {
-    _currentArtifact = null;
+  /// Fetch Artifact bằng QR Code
+  Future<void> fetchArtifactByQRCode(String qrCode) async {
+    _errorMessage = null;
+    try {
+      final artifact = await _artifactService.fetchArtifactByQRCode(qrCode);
+      if (artifact != null) {
+        _currentArtifact = artifact;
+
+        // Nếu Artifact chưa tồn tại, thêm nó vào danh sách
+        if (!_artifacts.any((item) => item.artifactId == artifact.artifactId)) {
+          _artifacts.add(artifact);
+        }
+      } else {
+        _errorMessage = 'Artifact not found for the given QR Code.';
+      }
+    } catch (e) {
+      _errorMessage = 'Error fetching artifact: $e';
+    }
     notifyListeners();
+  }
+
+  /// Lấy Artifact từ danh sách theo ID
+  Artifact? getArtifactById(int id) {
+    try {
+      return _artifacts.firstWhere((artifact) => artifact.artifactId == id);
+    } catch (e) {
+      return null; // Trả về null nếu không tìm thấy phần tử
+    }
   }
 
   /// Lấy Artifact từ danh sách theo tên
