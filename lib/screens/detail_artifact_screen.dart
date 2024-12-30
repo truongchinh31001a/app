@@ -114,7 +114,7 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
               // TOP: Video hoặc Hình ảnh
               if (videoUrl.isNotEmpty)
                 VideoWidget(
-                  videoUrl: 'http://192.168.1.4:3000$videoUrl',
+                  videoUrl: 'http://192.168.1.88:3000$videoUrl',
                   sourceId: artifact.artifactId,
                   sourceType: 'artifact',
                 )
@@ -151,7 +151,7 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
                 margin: const EdgeInsets.symmetric(horizontal: 16.0),
                 height: 180,
                 child: AudioWidget(
-                  audioUrl: 'http://192.168.1.4:3000$audioUrl',
+                  audioUrl: 'http://192.168.1.88:3000$audioUrl',
                   id: artifact.artifactId,
                   type: 'artifact',
                 ),
@@ -165,7 +165,7 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
   /// Hiển thị hình ảnh khi không có Video
   Widget _buildTopImage(String imageUrl) {
     return Image.network(
-      'http://192.168.1.4:3000$imageUrl',
+      'http://192.168.1.88:3000$imageUrl',
       fit: BoxFit.cover,
       width: double.infinity,
       height: 200,

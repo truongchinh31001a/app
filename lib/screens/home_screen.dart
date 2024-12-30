@@ -9,11 +9,11 @@ class HomeScreen extends StatelessWidget {
   String _getTextBasedOnLanguage(String? language) {
     switch (language) {
       case 'English':
-        return 'Phan Chau Trinh Medical Museum';
+        return 'Apollo Medical Museum';
       case 'Vietnamese':
-        return 'Bảo tàng y khoa Phan Châu Trinh';
+        return 'Bảo tàng y khoa Apollo';
       default:
-        return 'Bảo tàng y khoa Phan Châu Trinh'; // Mặc định là tiếng Việt
+        return 'Bảo tàng y khoa Apollo'; // Mặc định là tiếng Việt
     }
   }
 

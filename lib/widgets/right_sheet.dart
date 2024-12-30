@@ -1,7 +1,7 @@
 import 'dart:async';
-import 'package:app/screens/lock_screen.dart';
 import 'package:app/screens/thank_you_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart'; // Import notifications
 import 'package:provider/provider.dart';
 import '../providers/security_provider.dart';
 import '../screens/history_screen.dart';
@@ -16,16 +16,54 @@ class RightSheet extends StatefulWidget {
 class _RightSheetState extends State<RightSheet> {
   late Timer _timer;
   String _timeLeft = '';
+  late FlutterLocalNotificationsPlugin _notificationsPlugin;
 
   @override
   void initState() {
     super.initState();
+    _initializeNotifications();
     _startCountdown();
+  }
+
+  void _initializeNotifications() {
+    _notificationsPlugin = FlutterLocalNotificationsPlugin();
+
+    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const initializationSettings = InitializationSettings(android: androidSettings);
+
+    _notificationsPlugin.initialize(
+      initializationSettings,
+      onDidReceiveNotificationResponse: (response) {
+        // Hành động khi người dùng nhấn vào thông báo
+        debugPrint('Notification clicked!');
+      },
+    );
+  }
+
+  Future<void> _showNotification(String title, String body) async {
+    const androidDetails = AndroidNotificationDetails(
+      'session_notifications', // ID của kênh
+      'Session Notifications', // Tên kênh
+      channelDescription: 'Notifications for session expiration',
+      importance: Importance.high,
+      priority: Priority.high,
+    );
+
+    const notificationDetails = NotificationDetails(android: androidDetails);
+
+    await _notificationsPlugin.show(
+      0, // ID của thông báo
+      title,
+      body,
+      notificationDetails,
+    );
   }
 
   void _startCountdown() {
     final securityProvider =
         Provider.of<SecurityProvider>(context, listen: false);
+
+    bool hasNotified = false;
 
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       final expirationTime = securityProvider.expirationTime;
@@ -37,6 +75,14 @@ class _RightSheetState extends State<RightSheet> {
           securityProvider.lock();
           timer.cancel();
         } else {
+          if (!hasNotified && remainingDuration <= const Duration(minutes: 15)) {
+            _showNotification(
+              'Session Expiration',
+              'Your session will expire in 15 minutes. Please save your work.',
+            );
+            hasNotified = true;
+          }
+
           setState(() {
             _timeLeft = _formatDuration(remainingDuration);
           });
@@ -104,7 +150,7 @@ class _RightSheetState extends State<RightSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final securityProvider = Provider.of<SecurityProvider>(context);
+    Provider.of<SecurityProvider>(context);
 
     return FractionallySizedBox(
       widthFactor: 0.7,

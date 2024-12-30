@@ -180,7 +180,7 @@ class _LockScreenState extends State<LockScreen> {
                   const Padding(
                     padding: EdgeInsets.only(top: 60.0, bottom: 10.0),
                     child: Text(
-                      'Bảo tàng Y Khoa Phan Châu Trinh',
+                      'APOLLO MEDICAL MUSEUM',
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
@@ -189,7 +189,7 @@ class _LockScreenState extends State<LockScreen> {
                     ),
                   ),
                   Text(
-                    'chào mừng quý khách',
+                    'welcome',
                     style: GoogleFonts.montserrat(
                       fontSize: 24,
                       fontWeight: FontWeight.w500,

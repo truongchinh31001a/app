@@ -53,7 +53,7 @@ class DetailsStoryScreen extends StatelessWidget {
               // TOP: Hình ảnh hoặc Video
               if (videoPath.isNotEmpty)
                 VideoWidget(
-                    videoUrl: 'http://192.168.1.4:3000$videoPath',
+                    videoUrl: 'http://192.168.1.88:3000$videoPath',
                     sourceId: story.storyId,
                     sourceType: 'story')
               else if (imageUrl.isNotEmpty)
@@ -87,7 +87,7 @@ class DetailsStoryScreen extends StatelessWidget {
                 margin: const EdgeInsets.symmetric(horizontal: 16.0),
                 height: 180, // Cố định chiều cao của AudioWidget
                 child: AudioWidget(
-                  audioUrl: 'http://192.168.1.4:3000$audioPath',
+                  audioUrl: 'http://192.168.1.88:3000$audioPath',
                   id: story.storyId,
                   type: 'story',
                 ),
@@ -101,10 +101,10 @@ class DetailsStoryScreen extends StatelessWidget {
   /// Widget hiển thị hình ảnh
   Widget _buildTopImage(String imageUrl) {
     return Image.network(
-      'http://192.168.1.4:3000$imageUrl',
-      fit: BoxFit.cover,
+      'http://192.168.1.88:3000$imageUrl',
+      fit: BoxFit.contain, // Hiển thị toàn bộ hình ảnh
       width: double.infinity,
-      height: 200,
+      height: 400, // Chiều cao cố định là 400
     );
   }
 }
