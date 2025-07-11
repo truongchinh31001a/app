@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ArtifactLogService {
-  final String baseUrl = 'http://192.168.1.88:3000/api/app';
+  final String baseUrl = 'http://192.168.1.44:3000/api/app';
 
   /// Lưu Artifact Scan Log
   Future<void> logArtifactScan({

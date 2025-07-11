@@ -170,7 +170,8 @@ class _LockScreenState extends State<LockScreen> {
       body: Stack(
         children: [
           // Trạng thái "Idle" luôn hiện giao diện chính
-          if (_state == LockScreenState.idle || _state == LockScreenState.processing)
+          if (_state == LockScreenState.idle ||
+              _state == LockScreenState.processing)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
               child: Column(
@@ -207,31 +208,49 @@ class _LockScreenState extends State<LockScreen> {
                   ),
                   const Spacer(),
                   Center(
-                    child: GestureDetector(
-                      onTap: () {
-                        showModalBottomSheet(
-                          context: context,
-                          isDismissible: false,
-                          enableDrag: false,
-                          isScrollControlled: true,
-                          backgroundColor: Colors.transparent,
-                          builder: (_) => _buildQRScannerBottomSheet(),
-                        );
-                      },
-                      child: Container(
-                        width: 60,
-                        height: 60,
-                        margin: const EdgeInsets.only(bottom: 40.0),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF8C1B0B),
-                          borderRadius: BorderRadius.circular(10),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            showModalBottomSheet(
+                              context: context,
+                              isDismissible: false,
+                              enableDrag: false,
+                              isScrollControlled: true,
+                              backgroundColor: Colors.transparent,
+                              builder: (_) => _buildQRScannerBottomSheet(),
+                            );
+                          },
+                          child: Container(
+                            width: 60,
+                            height: 60,
+                            margin: const EdgeInsets.only(bottom: 16.0),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF8C1B0B),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(
+                              Icons.navigate_next,
+                              color: Color(0xFFF6FDFB),
+                              size: 32,
+                            ),
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.navigate_next,
-                          color: Color(0xFFF6FDFB),
-                          size: 32,
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pushReplacementNamed(context, '/main');
+                          },
+                          child: const Text(
+                            'Bỏ qua',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   ),
                 ],

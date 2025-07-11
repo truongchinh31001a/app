@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class StoryService {
-  final String baseUrl = 'http://192.168.1.88:3000';
+  final String baseUrl = 'http://192.168.1.44:3000';
 
   // Hàm call API để lấy danh sách stories
   Future<List<dynamic>> fetchStories() async {

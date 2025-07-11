@@ -38,7 +38,7 @@ class _MapScreenState extends State<MapScreen> {
       final highlights = await mapService.fetchHighlightPoints();
 
       final mapData = maps.firstWhere((map) => map['map_id'] == 1);
-      final imageUrl = 'http://192.168.1.88:3000${mapData['map_image']}';
+      final imageUrl = 'http://192.168.1.44:3000${mapData['map_image']}';
 
       if (mounted) {
         setState(() {
@@ -294,7 +294,7 @@ class __ArtifactListBottomSheetState extends State<_ArtifactListBottomSheet> {
                               child: ListTile(
                                 leading: artifact['image_url'] != null
                                     ? Image.network(
-                                        'http://192.168.1.88:3000${artifact['image_url']}',
+                                        'http://192.168.1.44:3000${artifact['image_url']}',
                                         width: 50,
                                         height: 50,
                                         fit: BoxFit.cover,

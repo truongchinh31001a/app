@@ -133,7 +133,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         return ListTile(
                           leading: artifact['image_url'] != null
                               ? Image.network(
-                                  'http://192.168.1.88:3000${artifact['image_url']}',
+                                  'http://192.168.1.44:3000${artifact['image_url']}',
                                   width: 50,
                                   height: 50,
                                   fit: BoxFit.cover,
